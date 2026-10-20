@@ -11,12 +11,21 @@ test('packaged MCP exposes a thread entrypoint, private UI tools and self-contai
     const open=tools.find(tool=>tool.name==='tree_open');
     assert.deepEqual(open._meta['openai/ui'].entrypoints,[{type:'thread'}]);
     assert.equal(open.inputSchema.required?.length||0,0);
+    for(const name of ['tree_snapshot','tree_rename','tree_reveal','tree_queue_reveal','tree_fork']){
+      assert.equal(tools.find(tool=>tool.name===name)._meta.ui.resourceUri,undefined);
+      assert.deepEqual(tools.find(tool=>tool.name===name)._meta.ui.visibility,['app']);
+    }
     assert.deepEqual(tools.find(tool=>tool.name==='tree_fork')._meta.ui.visibility,['app']);
     assert.deepEqual(tools.find(tool=>tool.name==='tree_reveal')._meta.ui.visibility,['app']);
     assert.equal(tools.find(tool=>tool.name==='tree_reveal').annotations.readOnlyHint,true);
+    assert.deepEqual(tools.find(tool=>tool.name==='tree_queue_reveal')._meta.ui.visibility,['app']);
     assert.equal(tools.find(tool=>tool.name==='tree_fork').annotations.readOnlyHint,false);
     const resource=await client.readResource({uri:open._meta.ui.resourceUri});
     assert.match(resource.contents[0].mimeType,/text\/html/);
+    assert.equal(resource.contents[0]._meta['openai/ui'].preferredDisplayMode,'inline');
+    assert.deepEqual(resource.contents[0]._meta['openai/ui'].availableDisplayModes,['inline']);
+    const legacy=await client.readResource({uri:'ui://conversation-tree/panel.html'});
+    assert.equal(legacy.contents[0]._meta['openai/ui'].preferredDisplayMode,'inline');
     assert.ok(resource.contents[0].text.includes('原生定位'));
     assert.ok(resource.contents[0].text.includes('桌面橋接'));
     assert.ok(resource.contents[0].text.includes('↻ 更新'));

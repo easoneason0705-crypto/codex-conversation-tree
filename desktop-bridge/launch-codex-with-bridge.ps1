@@ -88,6 +88,22 @@ Start-Process -FilePath $app -ArgumentList @(
   '--remote-debugging-address=127.0.0.1',
   "--remote-debugging-port=$Port"
 )
-Write-LauncherLog "Codex launched with bridge port $Port"
-Write-Host "Codex started with the conversation-tree desktop bridge on loopback port $Port."
+$debugReady = $false
+for ($attempt = 0; $attempt -lt 60; $attempt++) {
+  Start-Sleep -Milliseconds 250
+  try {
+    $version = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/json/version" -TimeoutSec 1
+    if ($version.webSocketDebuggerUrl) { $debugReady = $true; break }
+  } catch {}
+}
+if (-not $debugReady) {
+  try {
+    $runnerProcess = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+      Where-Object { $_.CommandLine -match [regex]::Escape($runner) -and $_.CommandLine -match "\s$Port\s" }
+    foreach ($process in $runnerProcess) { Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue }
+  } catch {}
+  throw "Codex 未在預期時間開放本機橋接埠 $Port。請不要從一般 Codex 入口再次開啟；確認所有 Codex 視窗已關閉後，再使用「Codex 對話樹」捷徑。"
+}
+Write-LauncherLog "Codex launched with verified bridge port $Port"
+Write-Host "Codex started with the verified conversation-tree desktop bridge on loopback port $Port."
 Write-Host "Bridge status: $state"

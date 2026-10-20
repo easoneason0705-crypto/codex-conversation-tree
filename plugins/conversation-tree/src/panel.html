@@ -5,7 +5,7 @@
     <div class="compactbar"><div class="source"><span class="dot"></span><span id="source">讀取本機提示詞…</span></div><button id="refresh" class="quiet">↻ 更新</button></div>
     <div id="notice" class="notice" role="status" hidden></div>
     <div class="pathbar"><span id="path">主線</span><button id="mainline" class="quiet">回到主線 ↗</button></div>
-    <section id="canvas" class="canvas" aria-label="對話樹"><div id="zoom" class="zoom" aria-live="polite">100%</div><div id="graph" class="graph"><svg id="edges" aria-hidden="true"></svg><div id="nodes"></div></div><div id="empty" class="empty" hidden>還沒有提示詞。發送第一則訊息後，這裡會長出第一個節點。</div></section>
+    <section id="canvas" class="canvas" aria-label="對話樹；按住空白處可移動畫布"><div id="zoom" class="zoom" aria-live="polite">100%</div><div id="graph" class="graph"><svg id="edges" aria-hidden="true"></svg><div id="nodes"></div></div><div id="empty" class="empty" hidden>還沒有提示詞。發送第一則訊息後，這裡會長出第一個節點。</div></section>
     <section id="detail" class="detail" hidden><div class="detail-top"><span class="eyebrow">選中的提示詞</span><button id="rename" class="quiet">重新命名</button></div><h2 id="detail-title"></h2><pre id="prompt"></pre><div class="detail-actions"><button id="copy" class="quiet">複製提示詞</button><button disabled title="由桌面橋接觸發 Codex 原生提示詞導覽條">原生定位 · 桌面橋接</button></div><p id="detail-hint" class="small"></p></section>
     <footer><span id="count">0 個節點</span><span id="sync">每 3 秒讀取本機歷史</span></footer>
     <details class="diagnostics"><summary>原型能力與限制</summary><p>點節點會先請求開啟所屬聊天，再由桌面橋接觸發 Codex 原生小白條。建立分支後會切換到新聊天，回到主線亦同。桌面橋接需要使用專用啟動器啟動 Codex。分支共用工作目錄。</p><p>目前顯示設定的主線、插件建立的分支，以及它們的原生後代分支。節點標題先使用原文短句，可手動改名。</p><pre id="diagnostic-text">等待宿主連接</pre></details>

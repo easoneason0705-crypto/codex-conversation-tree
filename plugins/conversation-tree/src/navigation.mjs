@@ -1,5 +1,9 @@
 function validId(value) { return typeof value === 'string' && /^[a-zA-Z0-9_-]{8,100}$/.test(value); }
 
+export function needsThreadSwitch(activeThreadId, targetThreadId) {
+  return activeThreadId !== targetThreadId;
+}
+
 // The host opens the chat. Precise reveal requests are queued through the MCP
 // server because an MCP App iframe cannot postMessage across Electron
 // WebContents boundaries.

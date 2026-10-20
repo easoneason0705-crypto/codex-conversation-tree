@@ -75,7 +75,7 @@ if (-not $NoShortcut) {
   $shortcut.Save()
 }
 
-Write-Host "`nConversation Tree 0.2.14 已準備完成。" -ForegroundColor Green
+Write-Host "`nConversation Tree 0.2.29 已準備完成。" -ForegroundColor Green
 Write-Host "設定檔：$configPath"
 if ($NoShortcut) { Write-Host '請完全退出 Codex，再執行 desktop-bridge\launch-codex-with-bridge.cmd。' }
 else { Write-Host '請完全退出 Codex，然後使用桌面的「Codex 對話樹」捷徑重新開啟。' }

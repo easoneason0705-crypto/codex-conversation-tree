@@ -7,7 +7,7 @@ foreach ($manifest in @('plugin.json', '.codex-plugin\plugin.json')) {
   if ($manifestVersion -ne $version) { throw "Version mismatch: $manifest is $manifestVersion, package.json is $version" }
 }
 $trackedText = Get-ChildItem $repoRoot -Recurse -File | Where-Object {
-  $_.FullName -notmatch '[\\/](node_modules|dist|packages|\.data|\.git)[\\/]'
+  $_.FullName -notmatch '[\\/](node_modules|dist|packages|\.data|\.research|\.git)[\\/]'
 }
 $privatePatterns = @(
   ('D:' + '\\Codex Conversation Tree'),
@@ -23,6 +23,8 @@ foreach ($script in Get-ChildItem (Join-Path $repoRoot 'desktop-bridge'), (Join-
   [void][System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$tokens, [ref]$errors)
   if ($errors.Count) { throw "PowerShell syntax error in $($script.FullName): $($errors[0].Message)" }
 }
+& node --test (Join-Path $repoRoot 'desktop-bridge\*.test.mjs')
+if ($LASTEXITCODE) { throw 'Desktop bridge tests failed.' }
 Push-Location $pluginRoot
 try {
   & npm ci

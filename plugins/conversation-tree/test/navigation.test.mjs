@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openThread } from '../src/navigation.mjs';
+import { needsThreadSwitch, openThread } from '../src/navigation.mjs';
+
+test('chat navigation skips deep links while selecting nodes in the active chat', () => {
+  assert.equal(needsThreadSwitch('chat-123','chat-123'),false);
+  assert.equal(needsThreadSwitch('chat-123','branch-456'),true);
+  assert.equal(needsThreadSwitch(null,'chat-123'),true);
+});
 
 test('chat navigation uses host link bridge without inventing message anchors', async () => {
   const links=[];

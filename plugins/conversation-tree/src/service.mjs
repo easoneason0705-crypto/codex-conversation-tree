@@ -91,6 +91,14 @@ export class TreeService {
     const name = createHash('sha256').update(id).digest('hex');
     await rm(join(config.dataDirectory, directory, `${name}.json`), { force: true });
   }
+  async bridgeEndpoint() {
+    try {
+      const state = JSON.parse(await readFile(join(config.dataDirectory, 'desktop-bridge', 'state.json'), 'utf8'));
+      const port = Number(state.bridgeApiPort);
+      if (state.status === 'running' && Number.isInteger(port) && port >= 1024 && port <= 65535) return `http://127.0.0.1:${port}`;
+    } catch {}
+    return null;
+  }
   async snapshot(rootThreadId = config.defaultThreadId) {
     if (!rootThreadId) throw new Error(`尚未設定主線對話 ID。請執行安裝精靈，或編輯 ${config.configPath || '使用者設定檔'}。`);
     const root = await this.readThread(rootThreadId);
@@ -199,10 +207,11 @@ export class TreeService {
         }
       } while (added);
     } catch (error) { warnings.push(`原生分支同步失敗：${error.message}`); }
+    const bridgeEndpoint = await this.bridgeEndpoint();
     return {
       rootThreadId, name: root.name || '目前對話', nodes, branches, warnings,
       refreshedAt: Date.now(), pollMs: 3000,
-      capabilities: { liveRead: true, fork: true, nativeMessageJump: 'desktop-bridge', nativeBranchSwitch: true },
+      capabilities: { liveRead: true, fork: true, nativeMessageJump: 'desktop-bridge', nativeBranchSwitch: true, bridgeEndpoint },
     };
   }
   async renameNode(rootThreadId, nodeId, title) {
@@ -213,7 +222,7 @@ export class TreeService {
     await this.save('titles', nodeId, { id: nodeId, title: clean });
     return this.snapshot(rootThreadId);
   }
-  async revealNode(rootThreadId, nodeId) {
+  async queueRevealNode(rootThreadId, nodeId) {
     // Re-read the tree and derive all native IDs server-side. The panel only
     // supplies a node ID, so it cannot ask the desktop bridge to click an
     // unrelated native navigation item.
@@ -231,15 +240,19 @@ export class TreeService {
       messageIndex: node.messageIndex,
     };
     await this.saveRevealCommand(command);
+    return { queued: true, nonce: command.nonce, threadId: command.threadId };
+  }
+  async revealNode(rootThreadId, nodeId) {
+    const queued = await this.queueRevealNode(rootThreadId, nodeId);
     const resultPath = join(config.dataDirectory, 'desktop-bridge', 'reveal-result.json');
-    for (let attempt = 0; attempt < 25; attempt++) {
+    for (let attempt = 0; attempt < 180; attempt++) {
       await delay(100);
       try {
         const result = JSON.parse(await readFile(resultPath, 'utf8'));
-        if (result.nonce !== command.nonce) continue;
-        if (result.status !== 'delivered') throw new Error('桌面橋接器拒絕了定位指令');
-        return { queued: true, delivered: true, nonce: command.nonce, threadId: command.threadId };
-      } catch (error) { if (error.code !== 'ENOENT' && error.message === '桌面橋接器拒絕了定位指令') throw error; }
+        if (result.nonce !== queued.nonce) continue;
+        if (result.status !== 'delivered') throw new Error('Codex 原生導航中找不到這個提示詞；請確認已切換到對應聊天後再重試');
+        return { ...queued, delivered: true };
+      } catch (error) { if (error.code !== 'ENOENT' && error.message.startsWith('Codex 原生導航')) throw error; }
     }
     throw new Error('桌面橋接器未連接。請完全退出 Codex，再使用桌面的「Codex 對話樹」捷徑重新開啟。');
   }
