@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "conversation-tree",
+  "version": "0.2.14",
+  "description": "Local conversation tree prototype: live prompt navigation inside a panel and explicit conversation forks.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "對話樹 · Conversation Tree",
+        "shortDescription": "本機對話樹、原生定位與對話分支",
+        "longDescription": "在對話旁檢視本機提示詞與分支。配合桌面橋接啟動器，點節點會使用 Codex 原生提示詞導覽條定位。",
+        "developerName": "Eason",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "defaultPrompt": ["打開對話樹面板"]
+      }
+    }
+  }
+}

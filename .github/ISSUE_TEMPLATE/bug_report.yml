@@ -1,0 +1,37 @@
+name: Bug report
+description: 回報可重現的 Conversation Tree 問題
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Conversation Tree 版本
+      placeholder: 0.2.14
+    validations:
+      required: true
+  - type: input
+    id: codex
+    attributes:
+      label: Codex Desktop 與 Windows 版本
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟
+      description: 請勿貼上聊天內容、聊天 ID 或私人路徑。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 預期結果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 實際結果
+    validations:
+      required: true

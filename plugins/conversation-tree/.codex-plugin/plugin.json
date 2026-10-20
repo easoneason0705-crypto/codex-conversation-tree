@@ -1,0 +1,14 @@
+{
+  "name": "conversation-tree",
+  "version": "0.2.14",
+  "description": "Local conversation tree with a native MCP App panel.",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "對話樹 · Conversation Tree",
+    "shortDescription": "對話樹、提示詞與分支",
+    "developerName": "Eason",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "defaultPrompt": ["打開對話樹面板"]
+  }
+}

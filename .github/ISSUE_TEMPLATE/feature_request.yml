@@ -1,0 +1,17 @@
+name: Feature request
+description: 建議新的互動或工作流程
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解決的問題
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建議行為
+    validations:
+      required: true

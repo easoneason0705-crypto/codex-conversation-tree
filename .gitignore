@@ -1,0 +1,10 @@
+**/node_modules/
+.research/
+.data/
+*.log
+plugins/conversation-tree/config.json
+plugins/conversation-tree/config.local.json
+packages/
+.DS_Store
+Thumbs.db
+*.tmp

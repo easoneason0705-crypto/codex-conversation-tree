@@ -1,0 +1,10 @@
+import { build } from 'esbuild';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+const bundle=await build({entryPoints:['src/panel.js'],bundle:true,write:false,minify:true,format:'esm',target:'es2022'});
+const template=await readFile('src/panel.html','utf8');
+const css=await readFile('src/panel.css','utf8');
+const html=template.replace('/* INLINE_STYLE */',()=>css).replace('/* INLINE_SCRIPT */',()=>bundle.outputFiles[0].text.replace(/<\/script/gi,'<\\/script'));
+await mkdir('dist',{recursive:true});await writeFile('dist/panel.html',html);
+console.log(`Built dist/panel.html (${Math.round(Buffer.byteLength(html)/1024)} KB)`);
+await build({entryPoints:['src/server.mjs'],bundle:true,minify:true,legalComments:'none',platform:'node',format:'esm',outfile:'dist/server.mjs',target:'node22',banner:{js:"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"}});
+console.log('Built dist/server.mjs (self-contained MCP server)');

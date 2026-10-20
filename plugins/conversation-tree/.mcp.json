@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "conversation_tree": {
+      "command": "node",
+      "args": ["./dist/server.mjs"],
+      "cwd": ".",
+      "enabled": true,
+      "startup_timeout_sec": 20
+    }
+  }
+}
