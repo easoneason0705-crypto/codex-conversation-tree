@@ -2,13 +2,35 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
 
+[![最新版本](https://img.shields.io/github/v/release/easoneason0705-crypto/codex-conversation-tree?label=release)](https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/latest)
+[![CI](https://github.com/easoneason0705-crypto/codex-conversation-tree/actions/workflows/ci.yml/badge.svg)](https://github.com/easoneason0705-crypto/codex-conversation-tree/actions/workflows/ci.yml)
+[![MIT 许可证](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Windows 平台](https://img.shields.io/badge/platform-Windows-0078D4.svg)
+
 Conversation Tree 把 Codex 聊天中的用户提示词整理成可交互的树。主线由左向右展开，分支向下延伸；点击节点可以回到对应聊天与提示词，并可从既有节点建立真正的 Codex 对话分支。
+
+<p align="center">
+  <img src="docs/assets/conversation-tree-demo.gif" width="400" alt="Conversation Tree 自动生成节点、跳转到提示词、创建分支并编辑树形布局">
+</p>
+
+<p align="center"><em>自动生成节点、原生提示词跳转、真实 Codex 分支和可视化树形编辑。</em></p>
+
+**[下载最新版本](https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/latest)** · [安装说明](#最简单的安装方式) · [故障排查](docs/TROUBLESHOOTING.md)
 
 目前正式版本：**0.2.30**。
 
 > 目前的原生消息定位桥接只支持 Windows 版 Codex Desktop。插件面板与对话数据都在本地运行，不会把聊天内容传送到第三方服务。
 
 > Conversation Tree 是独立开发的开源项目，并非由 OpenAI 创建、支持、认证或认可。
+
+## 演示内容
+
+上方 GIF 展示了完整的核心流程：
+
+1. 新提示词会自动生成对应的树节点。
+2. 点击节点会返回对应的 Codex 聊天和提示词位置。
+3. 可以从已完成的提示词创建真实的 Codex 对话分支。
+4. 可以自由调整节点和画布位置，而不改变真实对话结构。
 
 ## 功能
 

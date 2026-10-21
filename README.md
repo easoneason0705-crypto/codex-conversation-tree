@@ -2,13 +2,35 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
 
+[![Latest release](https://img.shields.io/github/v/release/easoneason0705-crypto/codex-conversation-tree?label=release)](https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/latest)
+[![CI](https://github.com/easoneason0705-crypto/codex-conversation-tree/actions/workflows/ci.yml/badge.svg)](https://github.com/easoneason0705-crypto/codex-conversation-tree/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D4.svg)
+
 Conversation Tree turns local Codex conversations into an interactive visual tree. Follow the main conversation from left to right, explore branches below their parent prompts, jump back to earlier prompts, and create real Codex conversation forks directly from the panel.
+
+<p align="center">
+  <img src="docs/assets/conversation-tree-demo.gif" width="400" alt="Conversation Tree generating nodes, navigating to a prompt, creating a branch, and editing the tree layout">
+</p>
+
+<p align="center"><em>Live node generation, native prompt navigation, real Codex branches, and visual tree editing.</em></p>
+
+**[Download the latest release](https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/latest)** · [Installation](#quick-installation) · [Troubleshooting](docs/TROUBLESHOOTING.md)
 
 Current stable release: **0.2.30**.
 
 > Native prompt navigation currently supports Codex Desktop on Windows. The plugin panel and conversation data remain on your computer and are not sent to third-party services.
 
 > Conversation Tree is an independent open-source project. It is not created, supported, certified, or endorsed by OpenAI.
+
+## Demo overview
+
+The demo above shows the complete workflow:
+
+1. New prompts appear as tree nodes automatically.
+2. Clicking a node returns to its corresponding Codex chat and prompt.
+3. A completed prompt can create a real Codex conversation branch.
+4. Nodes and the canvas can be rearranged visually without changing the conversation structure.
 
 ## Features
 
