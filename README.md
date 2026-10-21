@@ -1,33 +1,36 @@
 # Conversation Tree for Codex Desktop
 
-Conversation Tree 把 Codex 聊天中的使用者提示詞整理成可互動的樹。主線由左向右展開，分支向下延伸；點擊節點可以回到對應聊天與提示詞，並可從既有節點建立真正的 Codex 對話分支。
+[English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
 
-目前正式版本：**0.2.30**。
+Conversation Tree turns local Codex conversations into an interactive visual tree. Follow the main conversation from left to right, explore branches below their parent prompts, jump back to earlier prompts, and create real Codex conversation forks directly from the panel.
 
-> 目前的原生訊息定位橋接只支援 Windows 版 Codex Desktop。插件面板與對話資料都在本機運行，不會把聊天內容傳送到第三方服務。
+Current stable release: **0.2.30**.
 
-## 功能
+> Native prompt navigation currently supports Codex Desktop on Windows. The plugin panel and conversation data remain on your computer and are not sent to third-party services.
 
-- 依 Codex 工作目錄整理所有本機項目，並在面板中切換項目與主線聊天。
-- 為每個項目記住最後選擇的主線，重新打開面板時自動恢復。
-- 點擊節點後切換到所屬聊天，並使用 Codex 原生提示詞導覽條定位。
-- 從已完成的提示詞建立 Codex 對話分支，之後直接在原生聊天框續寫。
-- 自動發現由 Codex 桌面版再次建立的後代分支。
-- 刪除 Codex 分支聊天後，自動清除樹上的失效節點。
-- 使用節點左上角的圓形拖曳把手自由拖動，只改變視覺位置，不改變父子關係；節點本體的任何位置都可直接點擊跳轉。
-- 在空白處按住並拖動可查看有限畫布；首次開啟時主線自動位於中央。
-- 滑鼠滾輪或觸摸板縮放；拖動畫布底邊調整面板高度。
-- 保存節點標題、位置、縮放倍率與畫布高度。
+> Conversation Tree is an independent open-source project. It is not created, supported, certified, or endorsed by OpenAI.
 
-## 系統需求
+## Features
 
-- Windows 10 或 Windows 11。
-- 已安裝並登入 Codex Desktop。
-- [Node.js 22 LTS](https://nodejs.org/) 或更新版本，`node` 與 `npm` 可從 PowerShell 執行。
-- Git。
-- 目標專案至少已有一個 Codex 聊天。
+- Organizes local Codex conversations by project and working directory.
+- Remembers the selected main conversation for every project.
+- Switches to the correct chat and uses Codex's native prompt navigation when you click a node.
+- Creates real Codex conversation forks from completed prompts, then lets you continue in the native composer.
+- Discovers descendant branches created later by Codex Desktop.
+- Removes stale tree nodes after their corresponding branch chats are deleted.
+- Lets you drag nodes by their circular handle without changing the tree structure; the rest of each node remains available for navigation.
+- Supports bounded canvas panning, mouse-wheel and trackpad zooming, and adjustable panel height.
+- Saves node titles, positions, zoom level, canvas position, and panel height locally.
 
-可先在 PowerShell 檢查：
+## Requirements
+
+- Windows 10 or Windows 11.
+- Codex Desktop installed and signed in.
+- [Node.js 22 LTS](https://nodejs.org/) or later, with `node` and `npm` available in PowerShell.
+- Git.
+- At least one existing Codex chat in the project you want to view.
+
+Check the required commands in PowerShell:
 
 ```powershell
 node --version
@@ -36,110 +39,110 @@ git --version
 codex --version
 ```
 
-## 最簡單的安裝方式
+## Quick installation
 
-### 1. 下載程式碼
+### 1. Download the source
 
 ```powershell
 git clone https://github.com/easoneason0705-crypto/codex-conversation-tree.git
 Set-Location .\codex-conversation-tree
 ```
 
-也可以從 GitHub Releases 下載 Source code ZIP，解壓後在該資料夾開啟 PowerShell。
+You can also download the source ZIP from GitHub Releases, extract it, and open PowerShell in that folder.
 
-### 2. 執行安裝精靈
+### 2. Run the setup wizard
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 ```
 
-精靈會依序：
+The wizard will:
 
-1. 檢查 Node.js、npm 與 Codex CLI。
-2. 詢問首次打開時使用的專案資料夾。
-3. 列出該專案的 Codex 聊天，讓你選擇初始主線聊天。
-4. 在 `%USERPROFILE%\.codex\conversation-tree\config.json` 建立個人設定。
-5. 安裝依賴、建置面板並執行測試。
-6. 把本儲存庫加入 Codex 本機 marketplace，安裝並啟用插件。
-7. 在桌面建立「Codex 對話樹」捷徑。
+1. Check Node.js, npm, and the Codex CLI.
+2. Ask which project folder to use initially.
+3. List the Codex chats in that project and let you choose the initial main conversation.
+4. Create your personal configuration at `%USERPROFILE%\.codex\conversation-tree\config.json`.
+5. Install dependencies, build the panel, and run the tests.
+6. Add this repository as a local Codex marketplace, then install and enable the plugin.
+7. Create a **Codex Conversation Tree** shortcut on your desktop.
 
-也可一次傳入參數，適合重複部署：
+For repeatable installation, provide both values directly:
 
 ```powershell
 .\scripts\setup.ps1 `
   -Workspace 'D:\Projects\my-project' `
-  -RootThreadId '你的主線聊天-ID'
+  -RootThreadId 'your-main-chat-id'
 ```
 
-`RootThreadId` 是聊天識別碼，不是聊天標題。若不知道 ID，省略此參數，安裝精靈會列出可選聊天。
+`RootThreadId` is a chat identifier, not a chat title. Omit it if you do not know the ID; the wizard will show the available chats.
 
-### 3. 用專用捷徑啟動 Codex
+### 3. Start Codex with the dedicated shortcut
 
-1. 儲存尚未送出的文字。
-2. 完全退出目前正在運行的 Codex。
-3. 雙擊桌面的 **Codex 對話樹**。
-4. 如果啟動器偵測到一般方式啟動的 Codex，選擇「是」讓它關閉後重開。
+1. Save any text that has not been sent.
+2. Fully quit every running Codex process.
+3. Double-click **Codex Conversation Tree** on the desktop.
+4. If the launcher detects Codex running normally, choose **Yes** so it can close and restart it.
 
-專用捷徑會用隨機的 `127.0.0.1` DevTools 埠啟動當次 Codex 程序，再啟動本機橋接器。它不會修改 Microsoft Store 安裝包，也不會永久開放遠端連線。
+The shortcut starts that Codex session with a random loopback-only `127.0.0.1` DevTools port, then starts the local desktop bridge. It does not modify the Microsoft Store package or permanently expose a remote-debugging port.
 
-### 4. 打開面板
+### 4. Open the panel
 
-在 Codex 中確認「對話樹 · Conversation Tree」已啟用，然後：
+Confirm that **對話樹 · Conversation Tree** is enabled in Codex, then either:
 
-- 從對話旁的插件入口打開「對話樹」；或
-- 在聊天中輸入「打開對話樹面板」。
+- Open **Conversation Tree** from the plugin entry beside the chat; or
+- Type `Open the conversation tree panel` in the chat.
 
-面板每三秒同步一次，也可點擊「更新」。
+The panel synchronizes every three seconds. You can also select **Refresh** manually.
 
-面板頂部有兩個選單：左側選擇 Codex 項目，右側選擇該項目的主線聊天。項目由聊天的工作目錄自動辨識，不需要為每個項目重裝插件。
+The first menu at the top selects a Codex project; the second selects a main conversation within that project. Projects are detected from each chat's working directory, so the plugin does not need to be reinstalled for every project.
 
-## 使用教學
+## Usage
 
-### 跳到提示詞
+### Jump to a prompt
 
-直接點擊節點。若節點屬於另一個聊天，Codex 會先切換聊天；原生聊天載入後，桌面橋接會觸發左側小白條的既有定位行為。
+Click any node. If it belongs to another chat, Codex first switches to that chat. After the native chat loads, the desktop bridge invokes the existing prompt-navigation rail to reveal the matching prompt.
 
-若只切換聊天但沒有定位，通常是 Codex 沒有透過專用捷徑啟動。請參考 [疑難排解](docs/TROUBLESHOOTING.md)。
+If Codex switches chats but does not reveal the prompt, it was usually started without the dedicated shortcut. See [Troubleshooting](docs/TROUBLESHOOTING.md).
 
-### 建立分支
+### Create a branch
 
-1. 將滑鼠移到已完成回合的節點上。
-2. 點擊「＋ 建立分支」。
-3. 輸入分支名稱。
-4. 插件會建立真正的 Codex fork，並請宿主打開新聊天。
-5. 直接在原生聊天框輸入下一個提示詞。
+1. Move the pointer over a node whose turn has completed.
+2. Select **+ Create branch**.
+3. Enter a branch name.
+4. The plugin creates a real Codex fork and asks the host to open the new chat.
+5. Continue by typing the next prompt in the native composer.
 
-新提示詞送出後會出現在父節點下方。若 Codex 為了續寫建立了另一個後代聊天，插件會沿 `forkedFromId` 自動接回原樹。
+The new prompt appears below its parent node after it is sent. If Codex creates another descendant chat while continuing, the plugin follows `forkedFromId` and reconnects it to the same tree.
 
-### 切換項目或主線
+### Switch projects or main conversations
 
-1. 在面板頂部第一個選單選擇項目。
-2. 在第二個選單選擇該項目的主線聊天。
-3. 面板會立即載入對應的樹，之後重新打開時也會記住每個項目的選擇。
+1. Select a project from the first menu at the top of the panel.
+2. Select one of that project's main chats from the second menu.
+3. The corresponding tree loads immediately, and the selection is remembered when the panel is reopened.
 
-插件無法從 MCP App 沙箱直接讀取 Codex 左側目前選中的項目，因此第一次切換需在面板選一次。這個明確選擇不依賴私人 API，也能隨 GitHub 版本一起部署到其他電腦。
+The MCP App sandbox cannot directly read which project is currently selected in the Codex sidebar. Each project therefore needs to be selected in the panel once. This explicit choice is portable and does not depend on a private project-selection API.
 
-### 回到主線
+### Return to the main conversation
 
-在分支視圖點擊「回到主線」。這會打開目前所選樹的主線聊天，不會合併或刪除任何分支。
+Select **Return to main** from a branch view. This opens the selected tree's main chat; it does not merge or delete a branch.
 
-### 調整版面
+### Adjust the layout
 
-- **移動畫布：**在空白處按住並拖動。畫布四周設有邊界，不會無限移動；重新開啟時主線位於中央。
-- **移動節點：**拖動節點左上角的圓形把手。節點其他位置保留給點擊跳轉。
-- **縮放：**將游標放在畫布中，使用滑鼠滾輪或觸摸板；範圍為 40%–250%。
-- **調整高度：**拖動畫布最下方的邊框。
-- **重新命名：**使用節點操作中的改名功能；只改顯示標題，不修改原始提示詞。
+- **Pan the canvas:** Hold and drag an empty area. The canvas has boundaries and cannot be moved indefinitely; its initial view centers the main line.
+- **Move a node:** Drag the circular handle at the node's upper-left corner. The rest of the node remains clickable for navigation.
+- **Zoom:** Place the pointer over the canvas and use the mouse wheel or trackpad. The supported range is 40%–250%.
+- **Resize the panel:** Drag the bottom border of the canvas.
+- **Rename a node:** Use the node rename action. This changes only the displayed title, not the original prompt.
 
-所有視覺調整都保存在插件資料目錄中，不會改變聊天的樹狀結構。
+Visual adjustments are stored in the plugin data directory and never change the conversation tree structure.
 
-## 使用另一個專案或主線
+## Use another project or main conversation
 
-不需要重新執行安裝精靈。只要該專案已在 Codex 建立至少一個聊天，它就會出現在面板頂部的項目選單；選擇項目後，再從相鄰選單選擇主線聊天。
+You do not need to rerun the setup wizard. Once another project has at least one Codex chat, it appears in the project menu. Select the project and then choose its main conversation from the adjacent menu.
 
-安裝時的 `workspace` 與 `defaultThreadId` 只作為第一次使用的預設值。第一次在面板完成選擇後，插件會把最後選擇寫入資料目錄中的 `preferences.json`，並為每個工作目錄分別保存主線聊天。
+The installation values `workspace` and `defaultThreadId` are initial defaults only. After you select a tree in the panel, the plugin stores the last choice in `preferences.json` and keeps a separate main conversation selection for each working directory.
 
-設定檔格式：
+Configuration format:
 
 ```json
 {
@@ -150,54 +153,54 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 }
 ```
 
-也可用 `CONVERSATION_TREE_CONFIG` 指定另一份設定檔，或用下列環境變數覆寫單一欄位：
+Use `CONVERSATION_TREE_CONFIG` to select another configuration file, or override individual fields with:
 
 - `CONVERSATION_TREE_WORKSPACE`
 - `CONVERSATION_TREE_ROOT_THREAD_ID`
 - `CONVERSATION_TREE_DATA_DIR`
 - `CONVERSATION_TREE_CODEX_EXECUTABLE`
 
-## 為什麼會看到 127.0.0.1 網址
+## Why a 127.0.0.1 page may appear
 
-插件開發預覽會在 `127.0.0.1` 開一個臨時本機網頁。`127.0.0.1` 代表你的電腦本身，資料沒有因此上傳到網際網路。正式使用應從 Codex 的插件面板打開；瀏覽器預覽只用於開發與診斷，無法完整模擬原生聊天切換和提示詞定位。
+The development preview opens a temporary local page on `127.0.0.1`, which refers to your own computer. Opening this address does not send data to the internet. Normal use should open the native plugin panel inside Codex. The browser preview is intended for development and diagnostics and cannot fully emulate native chat switching or prompt navigation.
 
-## 資料與隱私
+## Data and privacy
 
-- 聊天內容由 Codex 本身管理；插件透過本機 Codex App Server 讀取本機聊天，並按每個聊天的工作目錄分組。
-- 插件不改寫聊天歷史，也不建立 Git worktree。
-- 分支關係、項目選擇、標題和版面資料預設位於 `%USERPROFILE%\.codex\conversation-tree\data`。
-- 桌面橋接只監聽 loopback 位址，並驗證定位指令中的聊天、回合與訊息 ID。
-- 使用者設定、聊天 ID、本機資料與記錄檔不會包含在 Git 發佈內容中。
+- Codex manages the original chat content. The plugin reads local chats through the local Codex App Server and groups them by working directory.
+- The plugin does not rewrite chat history or create Git worktrees.
+- Branch relationships, project selections, display titles, and layout data are stored under `%USERPROFILE%\.codex\conversation-tree\data` by default.
+- The desktop bridge listens only on a loopback address and validates the chat, turn, and message IDs in navigation requests.
+- User settings, chat IDs, local data, and logs are excluded from Git releases.
 
-更完整的資料流與信任邊界見 [架構說明](docs/ARCHITECTURE.md)。
+See [Architecture](docs/ARCHITECTURE.md) for the full data flow and trust boundaries.
 
-## 更新
+## Update
 
 ```powershell
 Set-Location .\codex-conversation-tree
 git pull
-.\scripts\setup.ps1 -Workspace '你的專案路徑' -RootThreadId '你的主線聊天-ID'
+.\scripts\setup.ps1 -Workspace 'your-project-path' -RootThreadId 'your-main-chat-id'
 ```
 
-更新後請完全退出 Codex，再從「Codex 對話樹」捷徑重開。
+After updating, fully quit Codex and reopen it from the **Codex Conversation Tree** shortcut.
 
-## 移除
+## Uninstall
 
-保留版面資料與設定：
+Keep layout data and settings:
 
 ```powershell
 .\scripts\uninstall.ps1
 ```
 
-連同本機版面資料一起刪除：
+Also remove the local layout data:
 
 ```powershell
 .\scripts\uninstall.ps1 -RemoveLocalData -Confirm
 ```
 
-移除插件不會刪除 Codex 聊天或專案原始碼。
+Uninstalling the plugin does not delete Codex chats or project source code.
 
-## 開發與驗證
+## Development and verification
 
 ```powershell
 Set-Location .\plugins\conversation-tree
@@ -207,34 +210,40 @@ npm test
 npm run package
 ```
 
-完整發佈檢查：
+Run the complete release checks from the repository root:
 
 ```powershell
 .\scripts\check-release.ps1
 ```
 
-本機瀏覽器預覽：
+Start the local browser preview:
 
 ```powershell
 Set-Location .\plugins\conversation-tree
 npm run preview
 ```
 
-專案結構、通訊流程與設計限制見 [架構說明](docs/ARCHITECTURE.md)，貢獻方式見 [CONTRIBUTING.md](CONTRIBUTING.md)。
+See [Architecture](docs/ARCHITECTURE.md) for the project structure, communication flow, and design constraints. See [Contributing](CONTRIBUTING.md) for contribution instructions.
 
-## 已知限制
+## Known limitations
 
-- 原生訊息定位依賴 Codex Desktop 目前的小白條與 Electron DevTools 行為；Codex 更新後可能需要調整橋接器。
-- 原生定位橋接目前只支援 Windows。沒有橋接器時，插件仍可顯示樹、建立分支與切換聊天。
-- 大型聊天樹尚未提供折疊與搜尋。
-- 同一時間的使用者設定只指定一個主線聊天。
+- Native prompt navigation depends on the current Codex Desktop prompt rail and Electron DevTools behavior. A future Codex update may require bridge changes.
+- The native navigation bridge currently supports Windows only. Without the bridge, the plugin can still display trees, create branches, and switch chats.
+- Large conversation trees do not yet provide collapsing or search.
+- The active user configuration selects one main conversation at a time.
 
-## 授權
+## Disclaimer
+
+Conversation Tree is an independent, community-developed open-source project. It is not affiliated with, sponsored by, supported by, certified by, or endorsed by OpenAI. “OpenAI” and “Codex” are trademarks of their respective owner.
+
+The desktop bridge is experimental and may stop working after Codex Desktop updates. Use it only with conversations and computers that you are authorized to access.
+
+## License
 
 [MIT License](LICENSE)
 
-## 參考
+## References
 
-- [OpenAI：Build plugins](https://developers.openai.com/plugins/build/plugins)
-- [OpenAI：Plugin submission and distribution](https://developers.openai.com/plugins/deploy/submission)
+- [OpenAI: Build plugins](https://developers.openai.com/plugins/build/plugins)
+- [OpenAI: Plugin submission and distribution](https://developers.openai.com/plugins/deploy/submission)
 - [Model Context Protocol Apps](https://modelcontextprotocol.io/docs/extensions/apps)
