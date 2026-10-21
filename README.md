@@ -43,6 +43,7 @@ The demo above shows the complete workflow:
 - Lets you drag nodes by their circular handle without changing the tree structure; the rest of each node remains available for navigation.
 - Supports bounded canvas panning, mouse-wheel and trackpad zooming, and adjustable panel height.
 - Saves node titles, positions, zoom level, canvas position, and panel height locally.
+- Follows the Codex light or dark theme automatically, with persistent Auto, Light, and Dark overrides.
 
 ## Requirements
 
@@ -156,7 +157,11 @@ Select **Return to main** from a branch view. This opens the selected tree's mai
 - **Resize the panel:** Drag the bottom border of the canvas.
 - **Rename a node:** Use the node rename action. This changes only the displayed title, not the original prompt.
 
-Visual adjustments are stored in the plugin data directory and never change the conversation tree structure.
+Visual adjustments are stored locally by the plugin and never change the conversation tree structure.
+
+### Change the appearance
+
+Use the appearance menu beside **Refresh**. **Auto** follows the Codex host theme and falls back to the operating-system theme when the host does not provide one. **Light** and **Dark** override the host and are remembered when the panel is reopened.
 
 ## Use another project or main conversation
 

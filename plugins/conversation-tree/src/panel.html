@@ -2,7 +2,7 @@
 <html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>對話樹</title><style>/* INLINE_STYLE */</style></head>
 <body>
   <main>
-    <div class="compactbar"><div class="source"><span class="dot"></span><span id="source">讀取本機提示詞…</span></div><div id="tree-pickers" class="tree-pickers" hidden><select id="workspace-picker" aria-label="切換 Codex 項目"></select><select id="root-picker" aria-label="切換主線聊天"></select></div><button id="refresh" class="quiet">↻ 更新</button></div>
+    <div class="compactbar"><div class="source"><span class="dot"></span><span id="source">讀取本機提示詞…</span></div><div class="compact-actions"><div id="tree-pickers" class="tree-pickers" hidden><select id="workspace-picker" aria-label="切換 Codex 項目"></select><select id="root-picker" aria-label="切換主線聊天"></select></div><select id="theme-picker" class="theme-picker" aria-label="插件外觀" title="插件外觀"><option value="auto">◐ 自動</option><option value="light">☀ 淺色</option><option value="dark">● 深色</option></select><button id="refresh" class="quiet">↻ 更新</button></div></div>
     <div id="notice" class="notice" role="status" hidden></div>
     <div class="pathbar"><span id="path">主線</span><button id="mainline" class="quiet">回到主線 ↗</button></div>
     <section id="canvas" class="canvas" aria-label="對話樹；按住空白處可移動畫布"><div id="zoom" class="zoom" aria-live="polite">100%</div><div id="graph" class="graph"><svg id="edges" aria-hidden="true"></svg><div id="nodes"></div></div><div id="empty" class="empty" hidden>還沒有提示詞。發送第一則訊息後，這裡會長出第一個節點。</div></section>

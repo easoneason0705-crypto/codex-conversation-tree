@@ -1,6 +1,6 @@
 {
   "name": "conversation-tree",
-  "version": "0.2.30",
+  "version": "0.2.31",
   "description": "Local conversation tree with a native MCP App panel.",
   "mcpServers": "./.mcp.json",
   "interface": {

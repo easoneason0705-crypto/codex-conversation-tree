@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+const {version}=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 test('packaged MCP exposes a thread entrypoint, private UI tools and self-contained HTML',async()=>{
   const client=new Client({name:'tree-test',version:'0.1.0'});
   const transport=new StdioClientTransport({command:process.execPath,args:['dist/server.mjs'],stderr:'pipe'});
@@ -21,7 +23,7 @@ test('packaged MCP exposes a thread entrypoint, private UI tools and self-contai
     assert.deepEqual(tools.find(tool=>tool.name==='tree_queue_reveal')._meta.ui.visibility,['app']);
     assert.equal(tools.find(tool=>tool.name==='tree_fork').annotations.readOnlyHint,false);
     const resource=await client.readResource({uri:open._meta.ui.resourceUri});
-    assert.match(open._meta.ui.resourceUri,/\/0\.2\.30\/panel\.html$/);
+    assert.equal(open._meta.ui.resourceUri,`ui://conversation-tree/${version}/panel.html`);
     assert.match(resource.contents[0].mimeType,/text\/html/);
     assert.equal(resource.contents[0]._meta['openai/ui'].preferredDisplayMode,'inline');
     assert.deepEqual(resource.contents[0]._meta['openai/ui'].availableDisplayModes,['inline']);
@@ -30,6 +32,8 @@ test('packaged MCP exposes a thread entrypoint, private UI tools and self-contai
     assert.ok(resource.contents[0].text.includes('原生定位'));
     assert.ok(resource.contents[0].text.includes('桌面橋接'));
     assert.ok(resource.contents[0].text.includes('↻ 更新'));
+    assert.ok(resource.contents[0].text.includes('插件外觀'));
+    assert.ok(resource.contents[0].text.includes('conversation-tree-theme-v1'));
     assert.ok(!resource.contents[0].text.includes('午餐示例'));
     assert.ok(!resource.contents[0].text.includes('把思路，留在路上'));
     assert.ok(!resource.contents[0].text.includes('/* INLINE_SCRIPT */'));

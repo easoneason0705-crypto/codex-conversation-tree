@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "conversation-tree",
-  "version": "0.2.30",
+  "version": "0.2.31",
   "description": "Local conversation tree prototype: live prompt navigation inside a panel and explicit conversation forks.",
   "extensions": {
     "com.openai": {

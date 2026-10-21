@@ -2,8 +2,9 @@ import { needsThreadSwitch, openThread } from './navigation.mjs';
 import { layoutTreeNodes } from './layout.mjs';
 import { centerOfNodes, createWorldGeometry, MAX_ZOOM, MIN_ZOOM, panWithinWorld, scrollForCenter } from './viewport.mjs';
 import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
+import { normalizeThemePreference, resolveTheme, THEME_STORAGE_KEY, themeSource } from './theme.mjs';
 const $ = id => document.getElementById(id);
-const app = new App({ name: 'conversation-tree', version: '0.2.30' }, {}, { autoResize: true });
+const app = new App({ name: 'conversation-tree', version: '0.2.31' }, {}, { autoResize: true });
 let current, liveSnapshot, selectedId, selectedBranch, dialogAction, dialogNode;
 let activeThreadId = null;
 let bridgeReady = false, loading = false, timer, graphSignature = '';
@@ -15,9 +16,31 @@ let graphWorld = null, updateGraphViewport = () => {}, centerGraphMainline = () 
 let centerOnNextRender = false;
 let projectCatalog = null;
 const preview = window.parent === window;
+const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+let hostContext = {};
+let themePreference = 'auto';
 let token = new URLSearchParams(location.hash.slice(1)).get('token');
 if(preview){try{if(token)sessionStorage.setItem('tree-preview-token',token);else token=sessionStorage.getItem('tree-preview-token');}catch{}}
 if (preview && token && location.hash) history.replaceState(null, '', location.pathname);
+
+try { themePreference=normalizeThemePreference(localStorage.getItem(THEME_STORAGE_KEY)); } catch {}
+function syncTheme(context={}) {
+  hostContext={...hostContext,...context};
+  if(context.styles?.variables)applyHostStyleVariables(context.styles.variables);
+  const resolved=resolveTheme({preference:themePreference,hostTheme:hostContext.theme,systemDark:systemTheme.matches});
+  applyDocumentTheme(resolved);
+  document.documentElement.dataset.themeMode=themePreference;
+  document.documentElement.dataset.themeSource=themeSource({preference:themePreference,hostTheme:hostContext.theme});
+  const picker=$('theme-picker');
+  if(picker&&picker.value!==themePreference)picker.value=themePreference;
+}
+function setThemePreference(value) {
+  themePreference=normalizeThemePreference(value);
+  try { localStorage.setItem(THEME_STORAGE_KEY,themePreference); } catch {}
+  syncTheme();
+}
+systemTheme.addEventListener?.('change',()=>{if(themePreference==='auto'&&!hostContext.theme)syncTheme();});
+syncTheme();
 
 function notice(text) { $('notice').textContent=text; $('notice').hidden=!text; }
 function activateLayout(snapshot) {
@@ -269,6 +292,7 @@ $('rename').onclick=()=>openDialog('rename',current.nodes.find(node=>node.id===s
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(current.nodes.find(node=>node.id===selectedId).text);notice('提示詞已複製。');}catch{notice('宿主未開放剪貼簿；可直接選取上方原文複製。');}};
 $('mainline').onclick=()=>{if(!current)return;selectedBranch=current.rootThreadId;const nodes=current.nodes.filter(node=>node.threadId===selectedBranch);selectedId=nodes.at(-1)?.id;render();centerGraphMainline('smooth');void navigate(current.rootThreadId);};
 $('refresh').onclick=()=>refresh(true);
+$('theme-picker').onchange=event=>setThemePreference(event.target.value);
 $('workspace-picker').onchange=event=>{const project=projectCatalog?.projects.find(item=>item.key===event.target.value);if(!project)return;syncProjectPickers(project.selectedRootId);void switchRoot(project.selectedRootId);};
 $('root-picker').onchange=event=>void switchRoot(event.target.value);
 $('canvas').addEventListener('wheel',event=>{
@@ -318,10 +342,10 @@ async function refresh(manual=false, requestedRoot=null){
   catch(error){notice(error.message);}finally{finishLoading();}
 }
 app.ontoolresult=result=>{try{const value=unwrap(result);const snapshot=value.snapshot||value;if(snapshot.nodes)setSnapshot(snapshot);}catch(error){notice(error.message);}};
-app.onhostcontextchanged=context=>{if(context.theme)applyDocumentTheme(context.theme);if(context.styles?.variables)applyHostStyleVariables(context.styles.variables);};
+app.onhostcontextchanged=context=>syncTheme(app.getHostContext()||context);
 async function start(){
   try{
-    if(!preview) await app.connect();
+    if(!preview){await app.connect();syncTheme(app.getHostContext()||{});}
     bridgeReady=true;
     $('diagnostic-text').textContent=preview?'環境：本機瀏覽器預覽（不是原生插件面板）\n資料：真實本機 Codex 歷史\n原生訊息跳轉：需要桌面橋接':JSON.stringify({environment:'MCP App',hostCapabilities:app.getHostCapabilities(),nativeMessageJump:'desktop-bridge',nativeBranchSwitch:!!app.getHostCapabilities()?.openLinks},null,2);
     if(!liveSnapshot) await refresh();

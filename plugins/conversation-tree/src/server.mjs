@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { TreeService, pluginRoot } from './service.mjs';
 
 const service = new TreeService();
-const version = '0.2.30';
+const version = '0.2.31';
 const server = new McpServer({ name: 'conversation-tree', title: '對話樹', version });
 // Codex caches MCP App resources by URI. Version the URI so an upgraded
 // plugin always receives the matching panel bundle instead of an old iframe.
