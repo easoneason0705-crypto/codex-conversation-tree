@@ -2,13 +2,14 @@
 
 Conversation Tree 把 Codex 聊天中的使用者提示詞整理成可互動的樹。主線由左向右展開，分支向下延伸；點擊節點可以回到對應聊天與提示詞，並可從既有節點建立真正的 Codex 對話分支。
 
-目前正式版本：**0.2.29**。
+目前正式版本：**0.2.30**。
 
 > 目前的原生訊息定位橋接只支援 Windows 版 Codex Desktop。插件面板與對話資料都在本機運行，不會把聊天內容傳送到第三方服務。
 
 ## 功能
 
-- 即時讀取指定專案中的主線與分支聊天。
+- 依 Codex 工作目錄整理所有本機項目，並在面板中切換項目與主線聊天。
+- 為每個項目記住最後選擇的主線，重新打開面板時自動恢復。
 - 點擊節點後切換到所屬聊天，並使用 Codex 原生提示詞導覽條定位。
 - 從已完成的提示詞建立 Codex 對話分支，之後直接在原生聊天框續寫。
 - 自動發現由 Codex 桌面版再次建立的後代分支。
@@ -55,8 +56,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 精靈會依序：
 
 1. 檢查 Node.js、npm 與 Codex CLI。
-2. 詢問要建立對話樹的專案資料夾。
-3. 列出該專案的 Codex 聊天，讓你貼上主線聊天 ID。
+2. 詢問首次打開時使用的專案資料夾。
+3. 列出該專案的 Codex 聊天，讓你選擇初始主線聊天。
 4. 在 `%USERPROFILE%\.codex\conversation-tree\config.json` 建立個人設定。
 5. 安裝依賴、建置面板並執行測試。
 6. 把本儲存庫加入 Codex 本機 marketplace，安裝並啟用插件。
@@ -90,6 +91,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 
 面板每三秒同步一次，也可點擊「更新」。
 
+面板頂部有兩個選單：左側選擇 Codex 項目，右側選擇該項目的主線聊天。項目由聊天的工作目錄自動辨識，不需要為每個項目重裝插件。
+
 ## 使用教學
 
 ### 跳到提示詞
@@ -108,9 +111,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 
 新提示詞送出後會出現在父節點下方。若 Codex 為了續寫建立了另一個後代聊天，插件會沿 `forkedFromId` 自動接回原樹。
 
+### 切換項目或主線
+
+1. 在面板頂部第一個選單選擇項目。
+2. 在第二個選單選擇該項目的主線聊天。
+3. 面板會立即載入對應的樹，之後重新打開時也會記住每個項目的選擇。
+
+插件無法從 MCP App 沙箱直接讀取 Codex 左側目前選中的項目，因此第一次切換需在面板選一次。這個明確選擇不依賴私人 API，也能隨 GitHub 版本一起部署到其他電腦。
+
 ### 回到主線
 
-在分支視圖點擊「回到主線」。這會打開設定中的主線聊天，不會合併或刪除任何分支。
+在分支視圖點擊「回到主線」。這會打開目前所選樹的主線聊天，不會合併或刪除任何分支。
 
 ### 調整版面
 
@@ -122,15 +133,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 
 所有視覺調整都保存在插件資料目錄中，不會改變聊天的樹狀結構。
 
-## 設定另一個專案或主線
+## 使用另一個專案或主線
 
-重新執行安裝精靈並傳入新的工作區與聊天 ID：
+不需要重新執行安裝精靈。只要該專案已在 Codex 建立至少一個聊天，它就會出現在面板頂部的項目選單；選擇項目後，再從相鄰選單選擇主線聊天。
 
-```powershell
-.\scripts\setup.ps1 -Workspace 'D:\Projects\another-project' -RootThreadId '另一個聊天-ID'
-```
-
-目前每份使用者設定追蹤一棵樹。切換設定後重新載入 Codex 插件面板。
+安裝時的 `workspace` 與 `defaultThreadId` 只作為第一次使用的預設值。第一次在面板完成選擇後，插件會把最後選擇寫入資料目錄中的 `preferences.json`，並為每個工作目錄分別保存主線聊天。
 
 設定檔格式：
 
@@ -156,9 +163,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 
 ## 資料與隱私
 
-- 聊天內容由 Codex 本身管理；插件透過本機 Codex App Server 讀取指定工作區。
+- 聊天內容由 Codex 本身管理；插件透過本機 Codex App Server 讀取本機聊天，並按每個聊天的工作目錄分組。
 - 插件不改寫聊天歷史，也不建立 Git worktree。
-- 分支關係、標題和版面資料預設位於 `%USERPROFILE%\.codex\conversation-tree\data`。
+- 分支關係、項目選擇、標題和版面資料預設位於 `%USERPROFILE%\.codex\conversation-tree\data`。
 - 桌面橋接只監聽 loopback 位址，並驗證定位指令中的聊天、回合與訊息 ID。
 - 使用者設定、聊天 ID、本機資料與記錄檔不會包含在 Git 發佈內容中。
 

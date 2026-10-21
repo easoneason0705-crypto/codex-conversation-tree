@@ -4,10 +4,10 @@ import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from '@model
 import { z } from 'zod';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { TreeService, pluginRoot, config } from './service.mjs';
+import { TreeService, pluginRoot } from './service.mjs';
 
 const service = new TreeService();
-const version = '0.2.29';
+const version = '0.2.30';
 const server = new McpServer({ name: 'conversation-tree', title: '對話樹', version });
 // Codex caches MCP App resources by URI. Version the URI so an upgraded
 // plugin always receives the matching panel bundle instead of an old iframe.
@@ -22,6 +22,7 @@ const panelUris = [
   'ui://conversation-tree/0.2.20/panel.html',
   'ui://conversation-tree/0.2.24/panel.html',
   'ui://conversation-tree/0.2.27/panel.html',
+  'ui://conversation-tree/0.2.29/panel.html',
 ];
 const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 function result(data) {
@@ -40,10 +41,22 @@ for (const resourceUri of panelUris) {
   }] }));
 }
 registerAppTool(server, 'tree_open', {
-  title: '對話樹', description: 'Open a local conversation tree panel for this workspace. Defaults to the configured chat. Does not jump or send messages in the native chat.',
+  title: '對話樹', description: 'Open the conversation tree for the selected Codex chat. Pass the current chat thread ID as rootThreadId when available; otherwise use the configured default.',
   inputSchema: { rootThreadId: z.string().optional() }, annotations: readOnly,
   _meta: { ui: { resourceUri: uri }, 'openai/ui': { entrypoints: [{ type: 'thread' }] } },
-}, handle(args => service.snapshot(args.rootThreadId || config.defaultThreadId)));
+}, handle(args => service.open(args.rootThreadId)));
+registerAppTool(server, 'tree_projects', {
+  title: '列出可用對話樹', description: 'List Codex projects and root chats so the panel can switch without sharing one global tree.',
+  inputSchema: {}, annotations: readOnly, _meta: { ui: { visibility: ['app'] } },
+}, handle(() => service.projects()));
+registerAppTool(server, 'tree_select_root', {
+  title: '切換對話樹', description: 'Select and remember one root chat for its project, then return that tree.',
+  inputSchema: { rootThreadId: z.string() }, annotations: readOnly,
+  _meta: { ui: { visibility: ['app'] } },
+}, handle(async args => {
+  await service.selectRoot(args.rootThreadId);
+  return service.snapshot(args.rootThreadId);
+}));
 registerAppTool(server, 'tree_snapshot', {
   title: '更新對話樹', inputSchema: { rootThreadId: z.string() }, annotations: readOnly,
   _meta: { ui: { visibility: ['app'] } },

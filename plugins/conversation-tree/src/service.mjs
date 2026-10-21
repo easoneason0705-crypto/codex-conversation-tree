@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir, readdir, rename, stat, access, rm } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { resolve, join, basename } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { CodexRpc } from './rpc.mjs';
@@ -9,6 +9,12 @@ import { config, pluginRoot } from './config.mjs';
 export { config, pluginRoot };
 const idPattern = /^[a-zA-Z0-9_-]{8,100}$/;
 const normalized = path => process.platform === 'win32' ? resolve(path).toLowerCase() : resolve(path);
+const workspaceKey = path => path ? normalized(path) : '__no_workspace__';
+const freshness = value => {
+  if (typeof value === 'number') return value;
+  const parsed = Date.parse(value || '');
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 export async function resolveCodexExecutable(configured, localAppData = process.env.LOCALAPPDATA) {
   if (configured) { try { await access(configured); return configured; } catch {} }
@@ -30,16 +36,111 @@ export async function resolveCodexExecutable(configured, localAppData = process.
 const codexExecutable = await resolveCodexExecutable(config.codexExecutable);
 
 export class TreeService {
-  constructor(rpc = new CodexRpc(codexExecutable)) {
+  constructor(rpc = new CodexRpc(codexExecutable), options = {}) {
     this.rpc = rpc;
+    this.dataDirectory = options.dataDirectory || config.dataDirectory;
     this.cache = new Map();
     this.forkBusy = false;
   }
   async readThread(id) {
     if (!idPattern.test(id)) throw new Error('無效的對話 ID');
     const { thread } = await this.rpc.call('thread/read', { threadId: id });
-    if (normalized(thread.cwd) !== normalized(config.workspace)) throw new Error('此原型僅能存取指定工作區的對話');
     return thread;
+  }
+  async listThreadSummaries() {
+    const summaries = new Map();
+    let cursor;
+    do {
+      const page = await this.rpc.call('thread/list', { limit: 100, ...(cursor ? { cursor } : {}) });
+      for (const summary of page.data || []) {
+        if (!summary?.id) continue;
+        const previous = summaries.get(summary.id);
+        const nextDate = summary.updatedAt || summary.recencyAt || summary.createdAt || null;
+        const previousDate = previous?.updatedAt || previous?.recencyAt || previous?.createdAt || null;
+        if (!previous || freshness(nextDate) >= freshness(previousDate)) summaries.set(summary.id, summary);
+      }
+      cursor = page.nextCursor;
+    } while (cursor);
+    return [...summaries.values()];
+  }
+  async readPreferences() {
+    try {
+      const value = JSON.parse(await readFile(join(this.dataDirectory, 'preferences.json'), 'utf8'));
+      return {
+        lastRootId: typeof value.lastRootId === 'string' ? value.lastRootId : null,
+        lastRootByWorkspace: value.lastRootByWorkspace && typeof value.lastRootByWorkspace === 'object' ? value.lastRootByWorkspace : {},
+      };
+    } catch { return { lastRootId: null, lastRootByWorkspace: {} }; }
+  }
+  async writePreferences(value) {
+    await mkdir(this.dataDirectory, { recursive: true });
+    const destination = join(this.dataDirectory, 'preferences.json');
+    const temp = `${destination}.${randomUUID()}.tmp`;
+    await writeFile(temp, JSON.stringify(value, null, 2), 'utf8');
+    await rename(temp, destination);
+  }
+  async projects() {
+    const summaries = await this.listThreadSummaries();
+    const branchIds = new Set((await this.records('branches')).map(record => record.id));
+    const roots = [];
+    for (const summary of summaries) {
+      if (branchIds.has(summary.id) || summary.forkedFromId || summary.parentThreadId) continue;
+      try {
+        const thread = await this.readThread(summary.id);
+        if (branchIds.has(thread.id) || thread.forkedFromId || thread.parentThreadId) continue;
+        roots.push({
+          id: thread.id,
+          name: thread.name || summary.name || '未命名對話',
+          workspace: thread.cwd || summary.cwd || '',
+          updatedAt: thread.updatedAt || summary.updatedAt || summary.recencyAt || summary.createdAt || null,
+        });
+      } catch {}
+    }
+    roots.sort((a, b) => freshness(b.updatedAt) - freshness(a.updatedAt));
+    const preferences = await this.readPreferences();
+    const grouped = new Map();
+    for (const root of roots) {
+      const key = workspaceKey(root.workspace);
+      if (!grouped.has(key)) grouped.set(key, {
+        key,
+        workspace: root.workspace,
+        name: root.workspace ? basename(root.workspace) : '未指定項目',
+        roots: [],
+      });
+      grouped.get(key).roots.push(root);
+    }
+    const projects = [...grouped.values()].map(project => {
+      const remembered = preferences.lastRootByWorkspace[project.key];
+      return { ...project, selectedRootId: project.roots.some(root => root.id === remembered) ? remembered : project.roots[0]?.id || null };
+    }).sort((a, b) => freshness(b.roots[0]?.updatedAt) - freshness(a.roots[0]?.updatedAt));
+    const allRootIds = new Set(roots.map(root => root.id));
+    const selectedRootId = allRootIds.has(preferences.lastRootId)
+      ? preferences.lastRootId
+      : (allRootIds.has(config.defaultThreadId) ? config.defaultThreadId : roots[0]?.id || null);
+    const selectedWorkspaceKey = projects.find(project => project.roots.some(root => root.id === selectedRootId))?.key || projects[0]?.key || null;
+    return { projects, selectedWorkspaceKey, selectedRootId };
+  }
+  async resolveRoot(requestedRootId = null) {
+    const catalog = await this.projects();
+    const roots = catalog.projects.flatMap(project => project.roots);
+    if (requestedRootId && !roots.some(root => root.id === requestedRootId)) throw new Error('找不到這個主線聊天；它可能已被刪除或屬於分支');
+    return { rootThreadId: requestedRootId || catalog.selectedRootId, catalog };
+  }
+  async selectRoot(rootThreadId, catalog = null) {
+    const available = catalog || await this.projects();
+    const project = available.projects.find(item => item.roots.some(root => root.id === rootThreadId));
+    if (!project) throw new Error('找不到這個主線聊天；它可能已被刪除或屬於分支');
+    const preferences = await this.readPreferences();
+    preferences.lastRootId = rootThreadId;
+    preferences.lastRootByWorkspace[project.key] = rootThreadId;
+    await this.writePreferences(preferences);
+    return rootThreadId;
+  }
+  async open(rootThreadId = null) {
+    const resolved = await this.resolveRoot(rootThreadId);
+    if (!resolved.rootThreadId) throw new Error('找不到可用的 Codex 聊天。請先在任一項目建立聊天，再重新開啟對話樹。');
+    await this.selectRoot(resolved.rootThreadId, resolved.catalog);
+    return this.snapshot(resolved.rootThreadId);
   }
   async turns(thread, force = false) {
     const modified = thread.path ? (await stat(thread.path)).mtimeMs : Date.now();
@@ -70,7 +171,7 @@ export class TreeService {
     return unique;
   }
   async records(directory) {
-    const folder = join(config.dataDirectory, directory);
+    const folder = join(this.dataDirectory, directory);
     await mkdir(folder, { recursive: true });
     const values = [];
     for (const name of await readdir(folder)) {
@@ -79,7 +180,7 @@ export class TreeService {
     return values;
   }
   async save(directory, id, value) {
-    const folder = join(config.dataDirectory, directory);
+    const folder = join(this.dataDirectory, directory);
     await mkdir(folder, { recursive: true });
     const name = createHash('sha256').update(id).digest('hex');
     const destination = join(folder, `${name}.json`);
@@ -89,11 +190,11 @@ export class TreeService {
   }
   async remove(directory, id) {
     const name = createHash('sha256').update(id).digest('hex');
-    await rm(join(config.dataDirectory, directory, `${name}.json`), { force: true });
+    await rm(join(this.dataDirectory, directory, `${name}.json`), { force: true });
   }
   async bridgeEndpoint() {
     try {
-      const state = JSON.parse(await readFile(join(config.dataDirectory, 'desktop-bridge', 'state.json'), 'utf8'));
+      const state = JSON.parse(await readFile(join(this.dataDirectory, 'desktop-bridge', 'state.json'), 'utf8'));
       const port = Number(state.bridgeApiPort);
       if (state.status === 'running' && Number.isInteger(port) && port >= 1024 && port <= 65535) return `http://127.0.0.1:${port}`;
     } catch {}
@@ -111,12 +212,13 @@ export class TreeService {
     // Treat the paginated active-thread list as the deletion authority so stale
     // branch records do not keep producing nodes forever.
     let activeThreads = null;
+    const rootWorkspace = workspaceKey(root.cwd);
     try {
       activeThreads = [];
       let cursor;
       do {
         const page = await this.rpc.call('thread/list', { limit: 100, ...(cursor ? { cursor } : {}) });
-        activeThreads.push(...page.data.filter(summary => normalized(summary.cwd) === normalized(config.workspace)));
+        activeThreads.push(...page.data.filter(summary => !summary.cwd || workspaceKey(summary.cwd) === rootWorkspace));
         cursor = page.nextCursor;
       } while (cursor);
     } catch (error) {
@@ -209,7 +311,7 @@ export class TreeService {
     } catch (error) { warnings.push(`原生分支同步失敗：${error.message}`); }
     const bridgeEndpoint = await this.bridgeEndpoint();
     return {
-      rootThreadId, name: root.name || '目前對話', nodes, branches, warnings,
+      rootThreadId, name: root.name || '目前對話', workspace: root.cwd || '', workspaceKey: workspaceKey(root.cwd), nodes, branches, warnings,
       refreshedAt: Date.now(), pollMs: 3000,
       capabilities: { liveRead: true, fork: true, nativeMessageJump: 'desktop-bridge', nativeBranchSwitch: true, bridgeEndpoint },
     };
@@ -244,7 +346,7 @@ export class TreeService {
   }
   async revealNode(rootThreadId, nodeId) {
     const queued = await this.queueRevealNode(rootThreadId, nodeId);
-    const resultPath = join(config.dataDirectory, 'desktop-bridge', 'reveal-result.json');
+    const resultPath = join(this.dataDirectory, 'desktop-bridge', 'reveal-result.json');
     for (let attempt = 0; attempt < 180; attempt++) {
       await delay(100);
       try {
@@ -257,7 +359,7 @@ export class TreeService {
     throw new Error('桌面橋接器未連接。請完全退出 Codex，再使用桌面的「Codex 對話樹」捷徑重新開啟。');
   }
   async saveRevealCommand(command) {
-    const folder = join(config.dataDirectory, 'desktop-bridge');
+    const folder = join(this.dataDirectory, 'desktop-bridge');
     await mkdir(folder, { recursive: true });
     const destination = join(folder, 'reveal-command.json');
     const temp = `${destination}.${randomUUID()}.tmp`;

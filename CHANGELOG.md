@@ -2,6 +2,18 @@
 
 本專案遵循 [Semantic Versioning](https://semver.org/)。
 
+## [0.2.30] - 2026-10-21
+
+### 新增
+
+- 對話樹面板可按 Codex 工作目錄切換項目，再選擇該項目的主線聊天；不再把所有視窗固定到安裝時設定的同一棵樹。
+- 每個項目會記住最後選擇的主線聊天，重新打開面板時恢復上次選擇。
+
+### 修正
+
+- 對聊天清單按 ID 去重，並使用已保存的分支關係排除分支聊天，避免分支被誤列為另一棵主線樹。
+- 升級插件與面板資源版本，確保 Codex 不會繼續載入 0.2.29 快取。
+
 ## [0.2.29] - 2026-10-20
 
 ### 修正
@@ -117,6 +129,7 @@
 - 移除示例資料與介紹區，只保留真實對話。
 - 移除套件中的個人路徑、聊天 ID 和固定 Node/Codex 執行檔路徑。
 
+[0.2.30]: https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/tag/v0.2.30
 [0.2.29]: https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/tag/v0.2.29
 [0.2.28]: https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/tag/v0.2.28
 [0.2.27]: https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/tag/v0.2.27

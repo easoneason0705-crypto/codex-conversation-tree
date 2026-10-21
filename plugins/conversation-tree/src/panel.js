@@ -3,15 +3,17 @@ import { layoutTreeNodes } from './layout.mjs';
 import { centerOfNodes, createWorldGeometry, MAX_ZOOM, MIN_ZOOM, panWithinWorld, scrollForCenter } from './viewport.mjs';
 import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
 const $ = id => document.getElementById(id);
-const app = new App({ name: 'conversation-tree', version: '0.2.29' }, {}, { autoResize: true });
+const app = new App({ name: 'conversation-tree', version: '0.2.30' }, {}, { autoResize: true });
 let current, liveSnapshot, selectedId, selectedBranch, dialogAction, dialogNode;
 let activeThreadId = null;
 let bridgeReady = false, loading = false, timer, graphSignature = '';
+let pendingRootId = null;
 let layoutRoot = null, layoutOffsets = new Map();
 let zoomScale = 1;
 let canvasHeight = 420;
 let graphWorld = null, updateGraphViewport = () => {}, centerGraphMainline = () => {};
 let centerOnNextRender = false;
+let projectCatalog = null;
 const preview = window.parent === window;
 let token = new URLSearchParams(location.hash.slice(1)).get('token');
 if(preview){try{if(token)sessionStorage.setItem('tree-preview-token',token);else token=sessionStorage.getItem('tree-preview-token');}catch{}}
@@ -69,8 +71,49 @@ function setSnapshot(snapshot) {
   if(rootChanged)activeThreadId=snapshot.rootThreadId;
   activateLayout(snapshot);
   if(!selectedBranch || !snapshot.branches.some(branch=>branch.id===selectedBranch)) selectedBranch=snapshot.rootThreadId;
+  syncProjectPickers(snapshot.rootThreadId);
   render();
   if(newestBranchNode) requestAnimationFrame(()=>scrollGraphNodeIntoView(newestBranchNode.id));
+}
+function syncProjectPickers(rootThreadId=current?.rootThreadId) {
+  if(!projectCatalog?.projects?.length)return;
+  const workspacePicker=$('workspace-picker'),rootPicker=$('root-picker');
+  const project=projectCatalog.projects.find(item=>item.roots.some(root=>root.id===rootThreadId))
+    || projectCatalog.projects.find(item=>item.key===workspacePicker.value)
+    || projectCatalog.projects[0];
+  if(!workspacePicker.options.length){
+    for(const item of projectCatalog.projects){
+      const option=document.createElement('option');option.value=item.key;option.textContent=`${item.name} (${item.roots.length})`;option.title=item.workspace;workspacePicker.append(option);
+    }
+  }
+  workspacePicker.value=project.key;
+  rootPicker.replaceChildren();
+  for(const root of project.roots){const option=document.createElement('option');option.value=root.id;option.textContent=root.name;option.title=root.name;rootPicker.append(option);}
+  rootPicker.value=project.roots.some(root=>root.id===rootThreadId)?rootThreadId:(project.selectedRootId||project.roots[0]?.id||'');
+  $('tree-pickers').hidden=false;
+}
+async function loadProjectPickers() {
+  try {
+    projectCatalog=await call('tree_projects');
+    $('workspace-picker').replaceChildren();
+    syncProjectPickers();
+  } catch (error) { console.warn('conversation-tree:project-pickers', error); }
+}
+async function switchRoot(rootThreadId) {
+  if (!rootThreadId || rootThreadId === current?.rootThreadId) return;
+  if(loading){pendingRootId=rootThreadId;return;}
+  loading=true;
+  try{
+    const snapshot=await call('tree_select_root',{rootThreadId});
+    const project=projectCatalog?.projects.find(item=>item.roots.some(root=>root.id===rootThreadId));
+    if(project){project.selectedRootId=rootThreadId;projectCatalog.selectedRootId=rootThreadId;projectCatalog.selectedWorkspaceKey=project.key;}
+    setSnapshot(snapshot);notice('已切換項目與對話樹。');
+  }catch(error){notice(error.message);syncProjectPickers();}finally{finishLoading();}
+}
+function finishLoading(){
+  loading=false;
+  const queued=pendingRootId;pendingRootId=null;
+  if(queued&&queued!==current?.rootThreadId)void switchRoot(queued);
 }
 function scrollGraphNodeIntoView(nodeId) {
   const canvas=$('canvas');
@@ -119,7 +162,8 @@ function select(node) {
 }
 function render() {
   if(!current) return;
-  $('source').textContent=current.name;
+  const workspaceName=current.workspace?current.workspace.split(/[\\/]/).filter(Boolean).at(-1):'未指定項目';
+  $('source').textContent=`${workspaceName} · ${current.name}`;$('source').title=current.workspace||current.name;
   const branch=current.branches.find(item=>item.id===selectedBranch);
   $('path').textContent=branch?.name || '主線';
   $('count').textContent=`${current.nodes.length} 個提示詞 · ${current.branches.length-1} 條支線`;
@@ -225,6 +269,8 @@ $('rename').onclick=()=>openDialog('rename',current.nodes.find(node=>node.id===s
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(current.nodes.find(node=>node.id===selectedId).text);notice('提示詞已複製。');}catch{notice('宿主未開放剪貼簿；可直接選取上方原文複製。');}};
 $('mainline').onclick=()=>{if(!current)return;selectedBranch=current.rootThreadId;const nodes=current.nodes.filter(node=>node.threadId===selectedBranch);selectedId=nodes.at(-1)?.id;render();centerGraphMainline('smooth');void navigate(current.rootThreadId);};
 $('refresh').onclick=()=>refresh(true);
+$('workspace-picker').onchange=event=>{const project=projectCatalog?.projects.find(item=>item.key===event.target.value);if(!project)return;syncProjectPickers(project.selectedRootId);void switchRoot(project.selectedRootId);};
+$('root-picker').onchange=event=>void switchRoot(event.target.value);
 $('canvas').addEventListener('wheel',event=>{
   if(!current)return;
   event.preventDefault();
@@ -263,13 +309,13 @@ new ResizeObserver(entries=>{
   canvasHeight=height;
   try{localStorage.setItem(`conversation-tree-canvas-height-v1:${current.rootThreadId}`,String(canvasHeight));}catch{}
 }).observe($('canvas'));
-async function refresh(manual=false){
+async function refresh(manual=false, requestedRoot=null){
   if(!bridgeReady||loading||$('dialog').open)return;
   loading=true;
-  try{const snapshot=await call(liveSnapshot?'tree_snapshot':'tree_open',liveSnapshot?{rootThreadId:liveSnapshot.rootThreadId}:{});
+  try{const snapshot=await call(requestedRoot?'tree_open':(liveSnapshot?'tree_snapshot':'tree_open'),requestedRoot?{rootThreadId:requestedRoot}:(liveSnapshot?{rootThreadId:liveSnapshot.rootThreadId}:{}));
     liveSnapshot=snapshot;
-    setSnapshot(snapshot);if(snapshot.warnings.length)notice(snapshot.warnings.join('\n'));else if(manual)notice('已讀取最新的本機對話歷史。');}
-  catch(error){notice(error.message);}finally{loading=false;}
+    setSnapshot(snapshot);if(manual)await loadProjectPickers();if(snapshot.warnings.length)notice(snapshot.warnings.join('\n'));else if(manual)notice('已讀取最新的本機對話與項目清單。');}
+  catch(error){notice(error.message);}finally{finishLoading();}
 }
 app.ontoolresult=result=>{try{const value=unwrap(result);const snapshot=value.snapshot||value;if(snapshot.nodes)setSnapshot(snapshot);}catch(error){notice(error.message);}};
 app.onhostcontextchanged=context=>{if(context.theme)applyDocumentTheme(context.theme);if(context.styles?.variables)applyHostStyleVariables(context.styles.variables);};
@@ -279,6 +325,7 @@ async function start(){
     bridgeReady=true;
     $('diagnostic-text').textContent=preview?'環境：本機瀏覽器預覽（不是原生插件面板）\n資料：真實本機 Codex 歷史\n原生訊息跳轉：需要桌面橋接':JSON.stringify({environment:'MCP App',hostCapabilities:app.getHostCapabilities(),nativeMessageJump:'desktop-bridge',nativeBranchSwitch:!!app.getHostCapabilities()?.openLinks},null,2);
     if(!liveSnapshot) await refresh();
+    await loadProjectPickers();
     timer=setInterval(()=>{if(!document.hidden)refresh();},3000);
   }catch(error){notice(error.message);}
 }

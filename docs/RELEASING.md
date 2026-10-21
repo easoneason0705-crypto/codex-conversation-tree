@@ -1,4 +1,4 @@
-# 發佈 0.2.29
+# 發佈 0.2.30
 
 ## 發佈前檢查
 
@@ -10,7 +10,7 @@
 
 確認以下項目：
 
-- `package.json`、portable manifest 與 Codex 相容 manifest 都是 0.2.29。
+- `package.json`、portable manifest 與 Codex 相容 manifest 都是 0.2.30。
 - 依賴能以 `npm ci` 乾淨安裝。
 - 面板與 MCP Server 能重新建置。
 - 全部單元、佈局與協定測試通過。
@@ -22,35 +22,37 @@
 
 1. 從專用捷徑啟動 Codex。
 2. 打開 Conversation Tree 原生面板。
-3. 點擊一個主線節點和一個分支節點，確認聊天切換及原生定位。
-4. 建立測試分支並送出第一個提示詞，確認節點同步。
-5. 拖動節點、縮放與調整畫布高度。
-6. 刪除測試分支聊天，確認節點消失。
+3. 在兩個不同工作目錄間切換，確認各自顯示正確主線，關閉再打開面板後仍記住選擇。
+4. 點擊一個主線節點和一個分支節點，確認聊天切換及原生定位。
+5. 建立測試分支並送出第一個提示詞，確認節點同步。
+6. 拖動節點、縮放與調整畫布高度。
+7. 刪除測試分支聊天，確認節點消失。
 
 ## 建立 Git 與標籤
 
 ```powershell
 git init
 git add .
-git commit -m "Release Conversation Tree 0.2.29"
+git commit -m "Release Conversation Tree 0.2.30"
 git branch -M main
 git remote add origin https://github.com/easoneason0705-crypto/codex-conversation-tree.git
 git push -u origin main
-git tag -a v0.2.29 -m "Conversation Tree 0.2.29"
-git push origin v0.2.29
+git tag -a v0.2.30 -m "Conversation Tree 0.2.30"
+git push origin v0.2.30
 ```
 
 ## GitHub Release 內容
 
-標題：`Conversation Tree 0.2.29`
+標題：`Conversation Tree 0.2.30`
 
 建議說明：
 
 ```markdown
-Conversation Tree 0.2.29 是第一個公開正式版本，為 Codex Desktop 提供可互動的本機對話樹。
+Conversation Tree 0.2.30 為 Codex Desktop 提供可互動、可跨項目切換的本機對話樹。
 
 ### 主要功能
 - 顯示真實主線、分支與後續提示詞。
+- 在同一面板切換不同 Codex 項目與主線聊天，並記住每個項目的選擇。
 - 點擊節點切換聊天，並在 Windows 上使用 Codex 原生導覽定位提示詞。
 - 從節點建立真正的 Codex 對話分支。
 - 長按拖動節點、滾輪／觸摸板縮放、調整畫布高度。
@@ -63,7 +65,7 @@ Conversation Tree 0.2.29 是第一個公開正式版本，為 Codex Desktop 提�
 原生提示詞定位橋接目前只支援 Windows，且可能受後續 Codex Desktop UI 更新影響。
 ```
 
-建立 Release 時附上 tag `v0.2.29`，可使用 GitHub 自動產生的 source `.zip` 與 `.tar.gz`。目前無需上傳包含個人設定的二進位包。
+建立 Release 時附上 tag `v0.2.30`，可使用 GitHub 自動產生的 source `.zip` 與 `.tar.gz`。目前無需上傳包含個人設定的二進位包。
 
 ## 發佈後
 

@@ -17,7 +17,10 @@ const server=createServer(async(req,res)=>{
   try{
     let body='';for await(const chunk of req){body+=chunk;if(body.length>16384)throw new Error('請求過大');}
     const {name,args={}}=JSON.parse(body);let value;
-    if(name==='tree_open'||name==='tree_snapshot')value=await service.snapshot(args.rootThreadId||config.defaultThreadId);
+    if(name==='tree_open')value=await service.open(args.rootThreadId);
+    else if(name==='tree_projects')value=await service.projects();
+    else if(name==='tree_select_root'){await service.selectRoot(args.rootThreadId);value=await service.snapshot(args.rootThreadId);}
+    else if(name==='tree_snapshot')value=await service.snapshot(args.rootThreadId);
     else if(name==='tree_rename')value=await service.renameNode(args.rootThreadId,args.nodeId,args.title);
     else if(name==='tree_fork')value=await service.fork(args.rootThreadId,args.nodeId,args.name);
     else throw new Error('不支援的操作');
