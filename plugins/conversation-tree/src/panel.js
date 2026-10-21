@@ -4,7 +4,7 @@ import { centerOfNodes, createWorldGeometry, MAX_ZOOM, MIN_ZOOM, panWithinWorld,
 import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
 import { normalizeThemePreference, resolveTheme, THEME_STORAGE_KEY, themeSource } from './theme.mjs';
 const $ = id => document.getElementById(id);
-const app = new App({ name: 'conversation-tree', version: '0.2.31' }, {}, { autoResize: true });
+const app = new App({ name: 'conversation-tree', version: '0.2.32' }, {}, { autoResize: true });
 let current, liveSnapshot, selectedId, selectedBranch, dialogAction, dialogNode;
 let activeThreadId = null;
 let bridgeReady = false, loading = false, timer, graphSignature = '';
@@ -49,7 +49,7 @@ function activateLayout(snapshot) {
   layoutRoot=root;layoutOffsets=new Map();centerOnNextRender=true;
   zoomScale=1;canvasHeight=420;
   try{
-    const saved=JSON.parse(localStorage.getItem(`conversation-tree-layout-v2:${root}`)||'{}');
+    const saved=JSON.parse(localStorage.getItem(`conversation-tree-layout-v3:${root}`)||'{}');
     for(const [id,point] of Object.entries(saved))if(Number.isFinite(point?.x)&&Number.isFinite(point?.y))layoutOffsets.set(id,point);
     const savedZoom=Number(localStorage.getItem(`conversation-tree-zoom-v1:${root}`));
     if(Number.isFinite(savedZoom)&&savedZoom>=MIN_ZOOM&&savedZoom<=MAX_ZOOM)zoomScale=savedZoom;
@@ -60,7 +60,7 @@ function activateLayout(snapshot) {
 }
 function saveLayout(){
   if(!current)return;
-  try{localStorage.setItem(`conversation-tree-layout-v2:${current.rootThreadId}`,JSON.stringify(Object.fromEntries(layoutOffsets)));}catch{}
+  try{localStorage.setItem(`conversation-tree-layout-v3:${current.rootThreadId}`,JSON.stringify(Object.fromEntries(layoutOffsets)));}catch{}
 }
 function applyZoom(){
   $('graph').style.zoom=String(zoomScale);
@@ -218,8 +218,9 @@ function renderGraph(){
     $('edges').replaceChildren();
     for(const node of all){const parent=byId.get(node.parentId);if(!parent)continue;const pp=positions.get(parent.id),p=positions.get(node.id);const path=document.createElementNS('http://www.w3.org/2000/svg','path');
       const ox=graphWorld?.offsetX||0,oy=graphWorld?.offsetY||0;
-      if(parent.threadId===node.threadId)path.setAttribute('d',`M ${pp.x+ox+180} ${pp.y+oy+34} C ${pp.x+ox+194} ${pp.y+oy+34}, ${p.x+ox-14} ${p.y+oy+34}, ${p.x+ox} ${p.y+oy+34}`);
-      else path.setAttribute('d',`M ${pp.x+ox+90} ${pp.y+oy+68} C ${pp.x+ox+90} ${pp.y+oy+86}, ${p.x+ox+90} ${p.y+oy-18}, ${p.x+ox+90} ${p.y+oy}`);
+      if(parent.threadId===node.threadId)path.setAttribute('d',`M ${pp.x+ox+90} ${pp.y+oy+68} C ${pp.x+ox+90} ${pp.y+oy+82}, ${p.x+ox+90} ${p.y+oy-14}, ${p.x+ox+90} ${p.y+oy}`);
+      else if(p.x<pp.x)path.setAttribute('d',`M ${pp.x+ox} ${pp.y+oy+34} C ${pp.x+ox-18} ${pp.y+oy+34}, ${p.x+ox+198} ${p.y+oy+34}, ${p.x+ox+180} ${p.y+oy+34}`);
+      else path.setAttribute('d',`M ${pp.x+ox+180} ${pp.y+oy+34} C ${pp.x+ox+198} ${pp.y+oy+34}, ${p.x+ox-18} ${p.y+oy+34}, ${p.x+ox} ${p.y+oy+34}`);
       $('edges').append(path);}
   };
   updateGraphViewport=()=>{resizeGraph();drawEdges();};

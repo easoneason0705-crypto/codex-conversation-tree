@@ -7,7 +7,7 @@
 [![MIT 授權](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Windows 平台](https://img.shields.io/badge/platform-Windows-0078D4.svg)
 
-Conversation Tree 把 Codex 聊天中的使用者提示詞整理成可互動的樹。主線由左向右展開，分支向下延伸；點擊節點可以回到對應聊天與提示詞，並可從既有節點建立真正的 Codex 對話分支。
+Conversation Tree 把 Codex 聊天中的使用者提示詞整理成可互動的樹。主線由上向下展開，較早的節點在上，較新的節點在下，分支從父節點左右兩側延伸；點擊節點可以回到對應聊天與提示詞，並可從既有節點建立真正的 Codex 對話分支。
 
 <p align="center">
   <img src="docs/assets/conversation-tree-demo.gif" width="400" alt="Conversation Tree 自動生成節點、跳轉到提示詞、建立分支並編輯樹狀版面">

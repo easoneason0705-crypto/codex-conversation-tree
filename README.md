@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D4.svg)
 
-Conversation Tree turns local Codex conversations into an interactive visual tree. Follow the main conversation from left to right, explore branches below their parent prompts, jump back to earlier prompts, and create real Codex conversation forks directly from the panel.
+Conversation Tree turns local Codex conversations into an interactive visual tree. Follow the main conversation from top to bottom, explore branches on either side of their parent prompts, jump back to earlier prompts, and create real Codex conversation forks directly from the panel.
 
 <p align="center">
   <img src="docs/assets/conversation-tree-demo.gif" width="400" alt="Conversation Tree generating nodes, navigating to a prompt, creating a branch, and editing the tree layout">

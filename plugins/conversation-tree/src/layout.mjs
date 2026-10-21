@@ -3,7 +3,15 @@ export function layoutTreeNodes(nodes, branches, rootThreadId, offsets = new Map
   const visibleThreadIds = new Set(nodes.map(node => node.threadId));
   const orderedThreadIds = [rootThreadId, ...branches.map(branch => branch.id)
     .filter(id => id !== rootThreadId && visibleThreadIds.has(id))];
-  const lanes = new Map([...new Set(orderedThreadIds)].map((id, index) => [id, index]));
+  const lanes = new Map();
+  for (const [index, id] of [...new Set(orderedThreadIds)].entries()) {
+    // Keep the mainline in the middle, then distribute branches left and
+    // right in creation order: -1, +1, -2, +2, ...
+    const lane = index === 0 ? 0 : (index % 2 ? -Math.ceil(index / 2) : index / 2);
+    lanes.set(id, lane);
+  }
+  const leftmostLane = Math.min(0, ...lanes.values());
+  const mainlineX = 26 + Math.abs(leftmostLane) * 210;
   const bases = new Map(), positions = new Map();
 
   function position(node, visiting = new Set()) {
@@ -16,8 +24,8 @@ export function layoutTreeNodes(nodes, branches, rootThreadId, offsets = new Map
     const sameThread = parent?.threadId === node.threadId;
     const depth = parentBase ? (sameThread ? parentBase.depth + 1 : parentBase.depth) : 0;
     const base = {
-      x: parentBase ? (sameThread ? parentBase.x + 210 : parentPoint.x) : 26,
-      y: 30 + (lanes.get(node.threadId) || 0) * 102,
+      x: mainlineX + (lanes.get(node.threadId) || 0) * 210,
+      y: parentBase ? (sameThread ? parentBase.y + 102 : parentPoint.y) : 30,
       depth,
     };
     bases.set(node.id, base);

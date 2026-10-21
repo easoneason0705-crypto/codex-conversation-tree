@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { TreeService, pluginRoot } from './service.mjs';
 
 const service = new TreeService();
-const version = '0.2.31';
+const version = '0.2.32';
 const server = new McpServer({ name: 'conversation-tree', title: '對話樹', version });
 // Codex caches MCP App resources by URI. Version the URI so an upgraded
 // plugin always receives the matching panel bundle instead of an old iframe.
@@ -23,6 +23,7 @@ const panelUris = [
   'ui://conversation-tree/0.2.24/panel.html',
   'ui://conversation-tree/0.2.27/panel.html',
   'ui://conversation-tree/0.2.29/panel.html',
+  'ui://conversation-tree/0.2.31/panel.html',
 ];
 const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 function result(data) {
