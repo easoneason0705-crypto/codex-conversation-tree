@@ -45,6 +45,7 @@ Conversation Tree 把 Codex 聊天中的使用者提示詞整理成可互動的�
 - 滑鼠滾輪或觸摸板縮放；拖動畫布底邊調整面板高度。
 - 保存節點標題、位置、縮放倍率與畫布高度。
 - 自動跟隨 Codex 的淺色或深色主題，也可持久選擇「自動／淺色／深色」。
+- 安裝時可選擇 English、简体中文或繁體中文，插件內部介面會使用所選語言。
 
 ## 系統需求
 
@@ -80,7 +81,7 @@ Set-Location .\codex-conversation-tree
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 ```
 
-精靈會依序：
+精靈會先讓你選擇 English、简体中文或繁體中文，安裝精靈與插件介面會使用該語言。隨後會依序：
 
 1. 檢查 Node.js、npm 與 Codex CLI。
 2. 詢問首次打開時使用的專案資料夾。
@@ -94,6 +95,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 
 ```powershell
 .\scripts\setup.ps1 `
+  -Language zh-TW `
   -Workspace 'D:\Projects\my-project' `
   -RootThreadId '你的主線聊天-ID'
 ```
@@ -177,6 +179,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
   "workspace": "D:\\Projects\\my-project",
   "defaultThreadId": "00000000-0000-0000-0000-000000000000",
   "dataDirectory": "C:\\Users\\name\\.codex\\conversation-tree\\data",
+  "locale": "zh-TW",
   "codexExecutable": null
 }
 ```
@@ -187,6 +190,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 - `CONVERSATION_TREE_ROOT_THREAD_ID`
 - `CONVERSATION_TREE_DATA_DIR`
 - `CONVERSATION_TREE_CODEX_EXECUTABLE`
+- `CONVERSATION_TREE_LOCALE`（`en`、`zh-CN` 或 `zh-TW`）
 
 ## 為什麼會看到 127.0.0.1 網址
 

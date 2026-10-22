@@ -44,6 +44,7 @@ The demo above shows the complete workflow:
 - Supports bounded canvas panning, mouse-wheel and trackpad zooming, and adjustable panel height.
 - Saves node titles, positions, zoom level, canvas position, and panel height locally.
 - Follows the Codex light or dark theme automatically, with persistent Auto, Light, and Dark overrides.
+- Offers English, Simplified Chinese, and Traditional Chinese during setup, then uses the selected language throughout the plugin UI.
 
 ## Requirements
 
@@ -79,7 +80,7 @@ You can also download the source ZIP from GitHub Releases, extract it, and open 
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 ```
 
-The wizard will:
+The wizard first lets you choose English, Simplified Chinese, or Traditional Chinese. The installer and plugin UI then use that language. It will also:
 
 1. Check Node.js, npm, and the Codex CLI.
 2. Ask which project folder to use initially.
@@ -93,6 +94,7 @@ For repeatable installation, provide both values directly:
 
 ```powershell
 .\scripts\setup.ps1 `
+  -Language en `
   -Workspace 'D:\Projects\my-project' `
   -RootThreadId 'your-main-chat-id'
 ```
@@ -176,6 +178,7 @@ Configuration format:
   "workspace": "D:\\Projects\\my-project",
   "defaultThreadId": "00000000-0000-0000-0000-000000000000",
   "dataDirectory": "C:\\Users\\name\\.codex\\conversation-tree\\data",
+  "locale": "en",
   "codexExecutable": null
 }
 ```
@@ -186,6 +189,7 @@ Use `CONVERSATION_TREE_CONFIG` to select another configuration file, or override
 - `CONVERSATION_TREE_ROOT_THREAD_ID`
 - `CONVERSATION_TREE_DATA_DIR`
 - `CONVERSATION_TREE_CODEX_EXECUTABLE`
+- `CONVERSATION_TREE_LOCALE` (`en`, `zh-CN`, or `zh-TW`)
 
 ## Why a 127.0.0.1 page may appear
 

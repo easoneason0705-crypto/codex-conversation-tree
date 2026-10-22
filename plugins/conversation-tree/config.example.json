@@ -2,5 +2,6 @@
   "workspace": "C:\\path\\to\\your\\project",
   "defaultThreadId": "00000000-0000-0000-0000-000000000000",
   "dataDirectory": "C:\\Users\\your-name\\.codex\\conversation-tree\\data",
+  "locale": "zh-TW",
   "codexExecutable": null
 }

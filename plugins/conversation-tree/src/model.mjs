@@ -1,3 +1,5 @@
+import { translate } from './i18n.mjs';
+
 export function cleanPrompt(text) {
   // Strip the attachment wrapper only when the host's explicit request marker exists.
   const marker = '## My request:';
@@ -5,16 +7,16 @@ export function cleanPrompt(text) {
   return (start >= 0 ? text.slice(start + marker.length) : text).trim();
 }
 
-export function promptTitle(text) {
+export function promptTitle(text, locale = 'zh-TW') {
   const line = cleanPrompt(text).replace(/\s+/g, ' ').replace(/^[#*>\s]+/, '');
-  return Array.from(line).slice(0, 22).join('') + (Array.from(line).length > 22 ? '…' : '') || '圖片或附件';
+  return Array.from(line).slice(0, 22).join('') + (Array.from(line).length > 22 ? '…' : '') || translate(locale, 'attachmentTitle');
 }
 
-export function nodesFromTurns(threadId, turns, branch, titles = {}) {
+export function nodesFromTurns(threadId, turns, branch, titles = {}, locale = 'zh-TW') {
   let start = 0;
   if (branch) {
     const index = turns.findIndex(turn => turn.id === branch.baseTurnId);
-    if (index < 0) throw new Error('分支的來源回合不在歷史中；停止連線以免顯示錯誤關係。');
+    if (index < 0) throw new Error(translate(locale, 'branchBoundaryMissing'));
     start = index + 1;
   }
   const nodes = [];
@@ -28,7 +30,7 @@ export function nodesFromTurns(threadId, turns, branch, titles = {}) {
       nodes.push({
         id, parentId, threadId, turnId: turn.id, messageId: item.id,
         messageIndex: Number.isInteger(item.navigationIndex) ? item.navigationIndex : index,
-        text: text || '（此提示詞只有圖片或附件）', title: titles[id] || promptTitle(text),
+        text: text || translate(locale, 'attachmentOnly'), title: titles[id] || promptTitle(text, locale),
         status: turn.status, branchId: threadId, createdAt: turn.startedAt,
         // The underlying fork boundary is a completed turn, not an individual steer message.
         branchable: turn.status === 'completed' && index === messages.length - 1,

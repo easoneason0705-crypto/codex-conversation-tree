@@ -12,7 +12,7 @@ test('user config supports portable relative paths and environment overrides', a
   const previousRoot = process.env.CONVERSATION_TREE_ROOT_THREAD_ID;
   try {
     await writeFile(path, JSON.stringify({
-      workspace: './workspace', defaultThreadId: 'saved-thread', dataDirectory: './data', codexExecutable: null,
+      workspace: './workspace', defaultThreadId: 'saved-thread', dataDirectory: './data', codexExecutable: null, locale: 'zh-CN',
     }));
     process.env.CONVERSATION_TREE_CONFIG = path;
     process.env.CONVERSATION_TREE_ROOT_THREAD_ID = 'environment-thread';
@@ -20,6 +20,7 @@ test('user config supports portable relative paths and environment overrides', a
     assert.equal(loaded.workspace, resolve(directory, 'workspace'));
     assert.equal(loaded.dataDirectory, resolve(directory, 'data'));
     assert.equal(loaded.defaultThreadId, 'environment-thread');
+    assert.equal(loaded.locale, 'zh-CN');
     assert.equal(loaded.configPath, path);
   } finally {
     if (previous === undefined) delete process.env.CONVERSATION_TREE_CONFIG;

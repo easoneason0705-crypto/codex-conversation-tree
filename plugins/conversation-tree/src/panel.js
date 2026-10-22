@@ -3,8 +3,9 @@ import { layoutTreeNodes } from './layout.mjs';
 import { centerOfNodes, createWorldGeometry, MAX_ZOOM, MIN_ZOOM, panWithinWorld, scrollForCenter } from './viewport.mjs';
 import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
 import { normalizeThemePreference, resolveTheme, THEME_STORAGE_KEY, themeSource } from './theme.mjs';
+import { normalizeLocale, translate } from './i18n.mjs';
 const $ = id => document.getElementById(id);
-const app = new App({ name: 'conversation-tree', version: '0.2.32' }, {}, { autoResize: true });
+const app = new App({ name: 'conversation-tree', version: '0.2.33' }, {}, { autoResize: true });
 let current, liveSnapshot, selectedId, selectedBranch, dialogAction, dialogNode;
 let activeThreadId = null;
 let bridgeReady = false, loading = false, timer, graphSignature = '';
@@ -19,6 +20,8 @@ const preview = window.parent === window;
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 let hostContext = {};
 let themePreference = 'auto';
+let locale = 'zh-TW';
+const tr = (key, variables) => translate(locale, key, variables);
 let token = new URLSearchParams(location.hash.slice(1)).get('token');
 if(preview){try{if(token)sessionStorage.setItem('tree-preview-token',token);else token=sessionStorage.getItem('tree-preview-token');}catch{}}
 if (preview && token && location.hash) history.replaceState(null, '', location.pathname);
@@ -41,6 +44,19 @@ function setThemePreference(value) {
 }
 systemTheme.addEventListener?.('change',()=>{if(themePreference==='auto'&&!hostContext.theme)syncTheme();});
 syncTheme();
+
+function applyLocale(value) {
+  const next=normalizeLocale(value);
+  const changed=next!==locale;
+  locale=next;
+  document.documentElement.lang=locale==='en'?'en':locale==='zh-CN'?'zh-Hans':'zh-Hant';
+  for(const element of document.querySelectorAll('[data-i18n]'))element.textContent=tr(element.dataset.i18n);
+  for(const element of document.querySelectorAll('[data-i18n-aria-label]'))element.setAttribute('aria-label',tr(element.dataset.i18nAriaLabel));
+  for(const element of document.querySelectorAll('[data-i18n-title]'))element.title=tr(element.dataset.i18nTitle);
+  for(const element of document.querySelectorAll('[data-i18n-placeholder]'))element.placeholder=tr(element.dataset.i18nPlaceholder);
+  if(changed)graphSignature='';
+}
+applyLocale(locale);
 
 function notice(text) { $('notice').textContent=text; $('notice').hidden=!text; }
 function activateLayout(snapshot) {
@@ -71,16 +87,16 @@ function saveZoom(){
   try{localStorage.setItem(`conversation-tree-zoom-v1:${current.rootThreadId}`,String(zoomScale));}catch{}
 }
 function unwrap(result) {
-  if (result.isError) throw new Error(result.content?.find(item => item.type==='text')?.text || '操作未完成');
+  if (result.isError) throw new Error(result.content?.find(item => item.type==='text')?.text || tr('operationIncomplete'));
   const value=result._meta?.tree;
-  if (!value) throw new Error('宿主未回傳面板資料（_meta.tree）');
+  if (!value) throw new Error(tr('missingPanelData'));
   return value;
 }
 async function call(name,args={}) {
   if (preview) {
     const response=await fetch('/api',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({name,args})});
     const value=await response.json();
-    if(!response.ok) throw new Error(value.error || '本機連線失敗');
+    if(!response.ok) throw new Error(value.error || tr('localConnectionFailed'));
     return value;
   }
   return unwrap(await app.callServerTool({name,arguments:args}));
@@ -90,6 +106,7 @@ function setSnapshot(snapshot) {
   const previousIds=current?.rootThreadId===snapshot.rootThreadId?new Set(current.nodes.map(node=>node.id)):null;
   const newestBranchNode=previousIds?snapshot.nodes.filter(node=>node.threadId!==snapshot.rootThreadId&&!previousIds.has(node.id)).at(-1):null;
   liveSnapshot=snapshot;
+  applyLocale(snapshot.locale);
   current=snapshot;
   if(rootChanged)activeThreadId=snapshot.rootThreadId;
   activateLayout(snapshot);
@@ -130,7 +147,7 @@ async function switchRoot(rootThreadId) {
     const snapshot=await call('tree_select_root',{rootThreadId});
     const project=projectCatalog?.projects.find(item=>item.roots.some(root=>root.id===rootThreadId));
     if(project){project.selectedRootId=rootThreadId;projectCatalog.selectedRootId=rootThreadId;projectCatalog.selectedWorkspaceKey=project.key;}
-    setSnapshot(snapshot);notice('已切換項目與對話樹。');
+    setSnapshot(snapshot);notice(tr('switchedTree'));
   }catch(error){notice(error.message);syncProjectPickers();}finally{finishLoading();}
 }
 function finishLoading(){
@@ -160,12 +177,12 @@ async function navigate(threadId, prefix = '', node = null) {
       activeThreadId=threadId;
     }
     if(node) {
-      notice(prefix + '正在定位對應提示詞…');
+      notice(prefix + tr('locating'));
       await queueNativeReveal(node);
     }
-    notice(prefix + (node?(switching?'已切換聊天並送出定位指令。':'已將定位指令送至桌面橋接器。'):(switching?'已向 Codex 請求開啟聊天。':'已在目前聊天。')));
+    notice(prefix + (node?(switching?tr('switchedAndQueued'):tr('queuedNavigation')):(switching?tr('openChatRequested'):tr('alreadyCurrentChat'))));
   }
-  catch(error) { notice(prefix + error.message + ' 可點節點重試開啟，無須再次建立分支。'); }
+  catch(error) { notice(prefix + error.message + tr('retryNode')); }
 }
 async function queueNativeReveal(node) {
   if(preview) return call('tree_queue_reveal',{rootThreadId:current.rootThreadId,nodeId:node.id});
@@ -185,18 +202,18 @@ function select(node) {
 }
 function render() {
   if(!current) return;
-  const workspaceName=current.workspace?current.workspace.split(/[\\/]/).filter(Boolean).at(-1):'未指定項目';
+  const workspaceName=current.workspace?current.workspace.split(/[\\/]/).filter(Boolean).at(-1):tr('unspecifiedProject');
   $('source').textContent=`${workspaceName} · ${current.name}`;$('source').title=current.workspace||current.name;
   const branch=current.branches.find(item=>item.id===selectedBranch);
-  $('path').textContent=branch?.name || '主線';
-  $('count').textContent=`${current.nodes.length} 個提示詞 · ${current.branches.length-1} 條支線`;
-  $('sync').textContent=`已同步 ${new Date(current.refreshedAt).toLocaleTimeString('zh-TW',{hour12:false})}`;
+  $('path').textContent=branch?.name || tr('mainline');
+  $('count').textContent=tr('count',{nodes:current.nodes.length,branches:current.branches.length-1});
+  $('sync').textContent=tr('synced',{time:new Date(current.refreshedAt).toLocaleTimeString(locale,{hour12:false})});
   const signature=JSON.stringify([current.nodes,current.branches,selectedId,selectedBranch]);
   if(signature!==graphSignature){graphSignature=signature;renderGraph();}
   const node=current.nodes.find(item=>item.id===selectedId);
   $('detail').hidden=!node;
   if(node){$('detail-title').textContent=node.title;$('prompt').textContent=node.text;
-    $('detail-hint').textContent=`下方為所選提示詞；使用桌面橋接啟動 Codex 後，點節點會觸發原生小白條定位。${node.branchable?'':'此節點尚不符合已完成回合分支條件。'}`;}
+    $('detail-hint').textContent=tr('detailHint',{suffix:node.branchable?'':tr('notBranchable')});}
 }
 function renderGraph(){
   const all=[...current.nodes];
@@ -237,10 +254,10 @@ function renderGraph(){
     const card=document.createElement('div');card.dataset.nodeId=node.id;card.className=`node${node.id===selectedId?' selected':''}${node.empty?' select-branch':''}`;cards.set(node.id,card);
     const button=document.createElement('button');button.className='node-main';button.title=node.title;button.setAttribute('aria-pressed',String(node.id===selectedId));
     const title=document.createElement('span');title.className='node-title';title.textContent=node.title;
-    const meta=document.createElement('span');meta.className='node-meta';meta.textContent=node.empty?'新支線 · 等待第一則提示詞':`${node.threadId===current.rootThreadId?'主線':'支線'} · ${node.status==='completed'?'已完成':'進行中或已中斷'}`;
+    const meta=document.createElement('span');meta.className='node-meta';meta.textContent=node.empty?tr('emptyBranchMeta'):`${node.threadId===current.rootThreadId?tr('mainlineMeta'):tr('branchMeta')} · ${node.status==='completed'?tr('completed'):tr('interrupted')}`;
     button.append(title,meta);button.onclick=()=>{if(node.empty){selectedBranch=node.threadId;render();void navigate(node.threadId);}else select(node);};card.append(button);
-    if(node.branchable){const fork=document.createElement('button');fork.className='fork';fork.textContent='＋ 建立分支';fork.setAttribute('aria-label',`從「${node.title}」建立分支`);fork.onclick=()=>openDialog('fork',node);card.append(fork);}
-    const drag=document.createElement('button');drag.className='drag-handle';drag.type='button';drag.title='拖曳節點';drag.setAttribute('aria-label',`拖曳「${node.title}」`);card.append(drag);
+    if(node.branchable){const fork=document.createElement('button');fork.className='fork';fork.textContent=tr('createBranchShort');fork.setAttribute('aria-label',tr('forkAria',{title:node.title}));fork.onclick=()=>openDialog('fork',node);card.append(fork);}
+    const drag=document.createElement('button');drag.className='drag-handle';drag.type='button';drag.title=tr('dragNode');drag.setAttribute('aria-label',tr('dragAria',{title:node.title}));card.append(drag);
     let dragging=false,startX=0,startY=0,startPoint=null,startOffset=null;
     drag.addEventListener('pointerdown',event=>{
       if(event.button!==0)return;
@@ -274,9 +291,9 @@ function renderGraph(){
 }
 function openDialog(action,node){
   dialogAction=action;dialogNode=node;$('dialog-error').textContent='';
-  $('dialog-title').textContent=action==='rename'?'為節點換個名字':'從這裡建立分支';
-  $('dialog-description').textContent=action==='rename'?'修改樹上的標題，原始提示詞保持不變。':`從「${node.title}」所在的已完成回合建立獨立聊天。建立後透過宿主開啟新聊天，再直接在聊天框輸入。工作目錄共用。`;
-  $('confirm').textContent=action==='rename'?'保存名稱':'建立獨立聊天';
+  $('dialog-title').textContent=action==='rename'?tr('renameTitle'):tr('forkTitle');
+  $('dialog-description').textContent=action==='rename'?tr('renameDescription'):tr('forkDescription',{title:node.title});
+  $('confirm').textContent=action==='rename'?tr('saveName'):tr('createIndependentChat');
   $('branch-name').value=action==='rename'?node.title:'';$('dialog').showModal();$('branch-name').focus();
 }
 $('cancel').onclick=()=>$('dialog').close();
@@ -285,12 +302,12 @@ $('branch-form').onsubmit=async event=>{
   $('confirm').disabled=true;
   try{
     if(dialogAction==='rename')setSnapshot(await call('tree_rename',{rootThreadId:current.rootThreadId,nodeId:dialogNode.id,title:name}));
-    else{const result=await call('tree_fork',{rootThreadId:current.rootThreadId,nodeId:dialogNode.id,name});selectedBranch=result.branch.id;setSnapshot(result.snapshot);$('dialog').close();await navigate(result.branch.id, (result.warning ? result.warning+'\n' : '')+`已建立「🌿 ${name}」。`);}
+    else{const result=await call('tree_fork',{rootThreadId:current.rootThreadId,nodeId:dialogNode.id,name});selectedBranch=result.branch.id;setSnapshot(result.snapshot);$('dialog').close();await navigate(result.branch.id, (result.warning ? result.warning+'\n' : '')+tr('createdBranch',{name}));}
     $('dialog').close();
   }catch(error){$('dialog-error').textContent=error.message;}finally{$('confirm').disabled=false;}
 };
 $('rename').onclick=()=>openDialog('rename',current.nodes.find(node=>node.id===selectedId));
-$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(current.nodes.find(node=>node.id===selectedId).text);notice('提示詞已複製。');}catch{notice('宿主未開放剪貼簿；可直接選取上方原文複製。');}};
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(current.nodes.find(node=>node.id===selectedId).text);notice(tr('promptCopied'));}catch{notice(tr('clipboardDenied'));}};
 $('mainline').onclick=()=>{if(!current)return;selectedBranch=current.rootThreadId;const nodes=current.nodes.filter(node=>node.threadId===selectedBranch);selectedId=nodes.at(-1)?.id;render();centerGraphMainline('smooth');void navigate(current.rootThreadId);};
 $('refresh').onclick=()=>refresh(true);
 $('theme-picker').onchange=event=>setThemePreference(event.target.value);
@@ -339,7 +356,7 @@ async function refresh(manual=false, requestedRoot=null){
   loading=true;
   try{const snapshot=await call(requestedRoot?'tree_open':(liveSnapshot?'tree_snapshot':'tree_open'),requestedRoot?{rootThreadId:requestedRoot}:(liveSnapshot?{rootThreadId:liveSnapshot.rootThreadId}:{}));
     liveSnapshot=snapshot;
-    setSnapshot(snapshot);if(manual)await loadProjectPickers();if(snapshot.warnings.length)notice(snapshot.warnings.join('\n'));else if(manual)notice('已讀取最新的本機對話與項目清單。');}
+    setSnapshot(snapshot);if(manual)await loadProjectPickers();if(snapshot.warnings.length)notice(snapshot.warnings.join('\n'));else if(manual)notice(tr('refreshed'));}
   catch(error){notice(error.message);}finally{finishLoading();}
 }
 app.ontoolresult=result=>{try{const value=unwrap(result);const snapshot=value.snapshot||value;if(snapshot.nodes)setSnapshot(snapshot);}catch(error){notice(error.message);}};
@@ -348,7 +365,7 @@ async function start(){
   try{
     if(!preview){await app.connect();syncTheme(app.getHostContext()||{});}
     bridgeReady=true;
-    $('diagnostic-text').textContent=preview?'環境：本機瀏覽器預覽（不是原生插件面板）\n資料：真實本機 Codex 歷史\n原生訊息跳轉：需要桌面橋接':JSON.stringify({environment:'MCP App',hostCapabilities:app.getHostCapabilities(),nativeMessageJump:'desktop-bridge',nativeBranchSwitch:!!app.getHostCapabilities()?.openLinks},null,2);
+    $('diagnostic-text').textContent=preview?tr('previewDiagnostic'):JSON.stringify({environment:'MCP App',hostCapabilities:app.getHostCapabilities(),nativeMessageJump:'desktop-bridge',nativeBranchSwitch:!!app.getHostCapabilities()?.openLinks},null,2);
     if(!liveSnapshot) await refresh();
     await loadProjectPickers();
     timer=setInterval(()=>{if(!document.hidden)refresh();},3000);

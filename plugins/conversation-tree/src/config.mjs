@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { normalizeLocale } from './i18n.mjs';
 
 export const pluginRoot = fileURLToPath(new URL('../', import.meta.url));
 export const defaultConfigPath = join(homedir(), '.codex', 'conversation-tree', 'config.json');
@@ -10,7 +11,10 @@ async function readJson(path) {
   try { return JSON.parse(await readFile(path, 'utf8')); }
   catch (error) {
     if (error.code === 'ENOENT') return null;
-    throw new Error(`無法讀取設定檔 ${path}：${error.message}`);
+    const locale = normalizeLocale(process.env.CONVERSATION_TREE_LOCALE);
+    throw new Error(locale === 'en' ? `Could not read configuration ${path}: ${error.message}`
+      : locale === 'zh-CN' ? `无法读取设置文件 ${path}：${error.message}`
+        : `無法讀取設定檔 ${path}：${error.message}`);
   }
 }
 
@@ -41,6 +45,7 @@ export async function loadConfig() {
     defaultThreadId: process.env.CONVERSATION_TREE_ROOT_THREAD_ID || raw?.defaultThreadId || null,
     dataDirectory,
     codexExecutable: expandPath(process.env.CONVERSATION_TREE_CODEX_EXECUTABLE || raw?.codexExecutable, base),
+    locale: normalizeLocale(process.env.CONVERSATION_TREE_LOCALE || raw?.locale),
     configPath: source,
   };
 }

@@ -5,6 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { CodexRpc } from './rpc.mjs';
 import { nodesFromTurns } from './model.mjs';
 import { config, pluginRoot } from './config.mjs';
+import { normalizeLocale, translate } from './i18n.mjs';
 
 export { config, pluginRoot };
 const idPattern = /^[a-zA-Z0-9_-]{8,100}$/;
@@ -39,11 +40,13 @@ export class TreeService {
   constructor(rpc = new CodexRpc(codexExecutable), options = {}) {
     this.rpc = rpc;
     this.dataDirectory = options.dataDirectory || config.dataDirectory;
+    this.locale = normalizeLocale(options.locale || config.locale);
     this.cache = new Map();
     this.forkBusy = false;
   }
+  tr(key, variables) { return translate(this.locale, key, variables); }
   async readThread(id) {
-    if (!idPattern.test(id)) throw new Error('無效的對話 ID');
+    if (!idPattern.test(id)) throw new Error(this.tr('invalidChatId'));
     const { thread } = await this.rpc.call('thread/read', { threadId: id });
     return thread;
   }
@@ -90,7 +93,7 @@ export class TreeService {
         if (branchIds.has(thread.id) || thread.forkedFromId || thread.parentThreadId) continue;
         roots.push({
           id: thread.id,
-          name: thread.name || summary.name || '未命名對話',
+          name: thread.name || summary.name || this.tr('unnamedChat'),
           workspace: thread.cwd || summary.cwd || '',
           updatedAt: thread.updatedAt || summary.updatedAt || summary.recencyAt || summary.createdAt || null,
         });
@@ -104,7 +107,7 @@ export class TreeService {
       if (!grouped.has(key)) grouped.set(key, {
         key,
         workspace: root.workspace,
-        name: root.workspace ? basename(root.workspace) : '未指定項目',
+        name: root.workspace ? basename(root.workspace) : this.tr('unspecifiedProject'),
         roots: [],
       });
       grouped.get(key).roots.push(root);
@@ -123,13 +126,13 @@ export class TreeService {
   async resolveRoot(requestedRootId = null) {
     const catalog = await this.projects();
     const roots = catalog.projects.flatMap(project => project.roots);
-    if (requestedRootId && !roots.some(root => root.id === requestedRootId)) throw new Error('找不到這個主線聊天；它可能已被刪除或屬於分支');
+    if (requestedRootId && !roots.some(root => root.id === requestedRootId)) throw new Error(this.tr('rootChatMissing'));
     return { rootThreadId: requestedRootId || catalog.selectedRootId, catalog };
   }
   async selectRoot(rootThreadId, catalog = null) {
     const available = catalog || await this.projects();
     const project = available.projects.find(item => item.roots.some(root => root.id === rootThreadId));
-    if (!project) throw new Error('找不到這個主線聊天；它可能已被刪除或屬於分支');
+    if (!project) throw new Error(this.tr('rootChatMissing'));
     const preferences = await this.readPreferences();
     preferences.lastRootId = rootThreadId;
     preferences.lastRootByWorkspace[project.key] = rootThreadId;
@@ -138,7 +141,7 @@ export class TreeService {
   }
   async open(rootThreadId = null) {
     const resolved = await this.resolveRoot(rootThreadId);
-    if (!resolved.rootThreadId) throw new Error('找不到可用的 Codex 聊天。請先在任一項目建立聊天，再重新開啟對話樹。');
+    if (!resolved.rootThreadId) throw new Error(this.tr('noChats'));
     await this.selectRoot(resolved.rootThreadId, resolved.catalog);
     return this.snapshot(resolved.rootThreadId);
   }
@@ -201,12 +204,12 @@ export class TreeService {
     return null;
   }
   async snapshot(rootThreadId = config.defaultThreadId) {
-    if (!rootThreadId) throw new Error(`尚未設定主線對話 ID。請執行安裝精靈，或編輯 ${config.configPath || '使用者設定檔'}。`);
+    if (!rootThreadId) throw new Error(this.tr('configMissingRoot', { path: config.configPath || this.tr('userConfig') }));
     const root = await this.readThread(rootThreadId);
     const records = (await this.records('branches')).filter(record => record.rootThreadId === rootThreadId);
     const titles = Object.fromEntries((await this.records('titles')).map(record => [record.id, record.title]));
-    const nodes = nodesFromTurns(root.id, await this.turns(root), null, titles);
-    const branches = [{ id: root.id, name: '主線', parentNodeId: null }];
+    const nodes = nodesFromTurns(root.id, await this.turns(root), null, titles, this.locale);
+    const branches = [{ id: root.id, name: this.tr('mainline'), parentNodeId: null }];
     const warnings = [];
     // A chat removed from the Codex sidebar may remain readable in local history.
     // Treat the paginated active-thread list as the deletion authority so stale
@@ -223,7 +226,7 @@ export class TreeService {
       } while (cursor);
     } catch (error) {
       activeThreads = null;
-      warnings.push(`活動聊天同步失敗：${error.message}`);
+      warnings.push(this.tr('activeSyncFailed', { message: error.message }));
     }
     const activeIds = activeThreads ? new Set(activeThreads.map(thread => thread.id)) : null;
     const candidates = [];
@@ -268,12 +271,12 @@ export class TreeService {
       if (activeIds && !activeIds.has(record.id) && !hasActiveDescendant && !awaitingListPropagation) {
         this.cache.delete(record.id);
         try { await this.remove('branches', record.id); }
-        catch (error) { warnings.push(`${record.name}：已刪除的分支無法清理本機關係（${error.message}）`); }
+        catch (error) { warnings.push(this.tr('staleBranchCleanupFailed', { name: record.name, message: error.message })); }
         continue;
       }
       try {
         const thread = await this.readThread(record.id);
-        nodes.push(...nodesFromTurns(record.id, await this.turns(thread), record, titles));
+        nodes.push(...nodesFromTurns(record.id, await this.turns(thread), record, titles, this.locale));
         branches.push({ ...record, name: record.name });
       } catch (error) { warnings.push(`${record.name}：${error.message}`); }
     }
@@ -302,25 +305,26 @@ export class TreeService {
           const parentNodeId = parentNodes.filter(n => inherited.has(n.turnId)).at(-1)?.id || parent.parentNodeId;
           if (!parentNodeId) continue;
           const record = { id: thread.id, rootThreadId, parentThreadId: parent.id, parentNodeId,
-            baseTurnId: boundary, name: thread.name || '原生分支', discovered: true };
-          nodes.push(...nodesFromTurns(thread.id, turns, record, titles));
+            baseTurnId: boundary, name: thread.name || this.tr('nativeBranch'), discovered: true };
+          nodes.push(...nodesFromTurns(thread.id, turns, record, titles, this.locale));
           branches.push(record);
           candidates.splice(i, 1); added = true;
         }
       } while (added);
-    } catch (error) { warnings.push(`原生分支同步失敗：${error.message}`); }
+    } catch (error) { warnings.push(this.tr('nativeBranchSyncFailed', { message: error.message })); }
     const bridgeEndpoint = await this.bridgeEndpoint();
     return {
-      rootThreadId, name: root.name || '目前對話', workspace: root.cwd || '', workspaceKey: workspaceKey(root.cwd), nodes, branches, warnings,
+      rootThreadId, name: root.name || this.tr('currentConversation'), workspace: root.cwd || '', workspaceKey: workspaceKey(root.cwd), nodes, branches, warnings,
+      locale: this.locale,
       refreshedAt: Date.now(), pollMs: 3000,
       capabilities: { liveRead: true, fork: true, nativeMessageJump: 'desktop-bridge', nativeBranchSwitch: true, bridgeEndpoint },
     };
   }
   async renameNode(rootThreadId, nodeId, title) {
     const snapshot = await this.snapshot(rootThreadId);
-    if (!snapshot.nodes.some(node => node.id === nodeId)) throw new Error('找不到節點');
+    if (!snapshot.nodes.some(node => node.id === nodeId)) throw new Error(this.tr('nodeNotFound'));
     const clean = title.trim();
-    if (!clean || Array.from(clean).length > 60) throw new Error('標題需介於 1–60 個字');
+    if (!clean || Array.from(clean).length > 60) throw new Error(this.tr('invalidTitle'));
     await this.save('titles', nodeId, { id: nodeId, title: clean });
     return this.snapshot(rootThreadId);
   }
@@ -331,9 +335,9 @@ export class TreeService {
     this.cache.clear();
     const snapshot = await this.snapshot(rootThreadId);
     const node = snapshot.nodes.find(item => item.id === nodeId);
-    if (!node) throw new Error('找不到節點');
+    if (!node) throw new Error(this.tr('nodeNotFound'));
     if (![node.threadId, node.turnId, node.messageId].every(value => idPattern.test(value))) {
-      throw new Error('此節點缺少原生定位資料');
+      throw new Error(this.tr('missingNativeLocation'));
     }
     const command = {
       source: 'conversation-tree', version: 1, type: 'reveal-user-message',
@@ -352,11 +356,11 @@ export class TreeService {
       try {
         const result = JSON.parse(await readFile(resultPath, 'utf8'));
         if (result.nonce !== queued.nonce) continue;
-        if (result.status !== 'delivered') throw new Error('Codex 原生導航中找不到這個提示詞；請確認已切換到對應聊天後再重試');
+        if (result.status !== 'delivered') throw new Error(this.tr('nativePromptMissing'));
         return { ...queued, delivered: true };
-      } catch (error) { if (error.code !== 'ENOENT' && error.message.startsWith('Codex 原生導航')) throw error; }
+      } catch (error) { if (error.code !== 'ENOENT' && error.message === this.tr('nativePromptMissing')) throw error; }
     }
-    throw new Error('桌面橋接器未連接。請完全退出 Codex，再使用桌面的「Codex 對話樹」捷徑重新開啟。');
+    throw new Error(this.tr('bridgeDisconnected'));
   }
   async saveRevealCommand(command) {
     const folder = join(this.dataDirectory, 'desktop-bridge');
@@ -367,30 +371,30 @@ export class TreeService {
     await rename(temp, destination);
   }
   async fork(rootThreadId, nodeId, name) {
-    if (this.forkBusy) throw new Error('上一個分支仍在建立中');
+    if (this.forkBusy) throw new Error(this.tr('forkBusy'));
     this.forkBusy = true;
     try {
       // Re-read the selected history before the mutation; never trust a client-supplied turn ID.
       this.cache.clear();
       const snapshot = await this.snapshot(rootThreadId);
       const node = snapshot.nodes.find(item => item.id === nodeId);
-      if (!node?.branchable) throw new Error('只能從已完成回合的最後一則提示詞建立分支');
+      if (!node?.branchable) throw new Error(this.tr('forkOnlyCompleted'));
       const cleanName = name.trim();
-      if (!cleanName || cleanName.length > 60) throw new Error('請輸入 1–60 個字的分支名稱');
+      if (!cleanName || cleanName.length > 60) throw new Error(this.tr('invalidBranchName'));
       const { thread } = await this.rpc.call('thread/fork', {
         threadId: node.threadId, lastTurnId: node.turnId, excludeTurns: true,
       });
       const record = { id: thread.id, rootThreadId, parentThreadId: node.threadId,
         parentNodeId: node.id, baseTurnId: node.turnId, name: cleanName, createdAt: Date.now() };
       try { await this.save('branches', thread.id, record); }
-      catch (error) { throw new Error(`分支已建立（${thread.id}），但保存樹關係失敗：${error.message}。請勿重試建立。`); }
+      catch (error) { throw new Error(this.tr('forkSaveFailed', { id: thread.id, message: error.message })); }
       let warning = null;
       try { await this.rpc.call('thread/name/set', { threadId: thread.id, name: `🌿 ${cleanName}` }); }
-      catch { warning = `分支已建立，但命名未成功。對話 ID：${thread.id}`; }
+      catch { warning = this.tr('forkRenameFailed', { id: thread.id }); }
       let updated;
       try { updated = await this.snapshot(rootThreadId); }
       catch (error) {
-        warning = `分支已建立（${thread.id}），但刷新失敗：${error.message}。請使用更新按鈕，勿重複建立。`;
+        warning = this.tr('forkRefreshFailed', { id: thread.id, message: error.message });
         updated = { ...snapshot, branches: [...snapshot.branches, record] };
       }
       return { branch: record, warning, snapshot: updated };
