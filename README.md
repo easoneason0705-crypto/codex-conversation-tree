@@ -17,7 +17,7 @@ Conversation Tree turns local Codex conversations into an interactive visual tre
 
 **[Download the latest release](https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/latest)** · [Installation](#quick-installation) · [Troubleshooting](docs/TROUBLESHOOTING.md)
 
-Current stable release: **0.2.30**.
+Current stable release: **0.2.33**.
 
 > Native prompt navigation currently supports Codex Desktop on Windows. The plugin panel and conversation data remain on your computer and are not sent to third-party services.
 

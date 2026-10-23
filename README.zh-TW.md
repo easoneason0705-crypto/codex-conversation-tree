@@ -17,7 +17,7 @@ Conversation Tree 把 Codex 聊天中的使用者提示詞整理成可互動的�
 
 **[下載最新版本](https://github.com/easoneason0705-crypto/codex-conversation-tree/releases/latest)** · [安裝說明](#最簡單的安裝方式) · [疑難排解](docs/TROUBLESHOOTING.md)
 
-目前正式版本：**0.2.30**。
+目前正式版本：**0.2.33**。
 
 > 目前的原生訊息定位橋接只支援 Windows 版 Codex Desktop。插件面板與對話資料都在本機運行，不會把聊天內容傳送到第三方服務。
 
